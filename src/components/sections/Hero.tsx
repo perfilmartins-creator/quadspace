@@ -1,4 +1,4 @@
-import { Placeholder } from "@/components/ui/Placeholder";
+import Image from "next/image";
 import { hero } from "@/lib/content";
 
 export function Hero() {
@@ -43,11 +43,16 @@ export function Hero() {
       </div>
 
       <div className="container-edit mt-16">
-        <Placeholder
-          label="QUAD SPACE — Vista geral do estúdio"
-          ratio="landscape"
-          className="w-full"
-        />
+        <div className="relative aspect-[4/3] w-full overflow-hidden border border-line sm:aspect-[16/9]">
+          <Image
+            src={hero.image.src}
+            alt={hero.image.alt}
+            fill
+            priority
+            sizes="(min-width: 1280px) 90rem, 100vw"
+            className="object-cover"
+          />
+        </div>
       </div>
     </section>
   );

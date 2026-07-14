@@ -6,6 +6,10 @@ export const hero = {
   body: "A QUAD é um estúdio em Recife para fotografia, vídeo, conteúdo, campanhas, workshops e projetos criativos.",
   ctaPrimary: { label: "Conheça o espaço", href: "#espaco" },
   ctaSecondary: { label: "Reservar horário", href: "#reserva" },
+  image: {
+    src: "/hero/hero.jpg",
+    alt: "Vista geral do estúdio QUAD SPACE, com softboxes, fundo infinito e a sala de apoio ao fundo",
+  },
 };
 
 export const spaceSection = {
@@ -68,15 +72,37 @@ export const possibilities = {
 export const gallery = {
   kicker: "Galeria",
   title: "Registros de quem já esteve aqui.",
-  // PLACEHOLDER — substituir por fotografias reais do espaço e das produções.
-  // Ver public/gallery/README.md para nomes, proporções e formatos esperados.
   items: [
-    { label: "Estúdio — Fotografia", ratio: "portrait" as const },
-    { label: "Estúdio — Vídeo", ratio: "landscape" as const },
-    { label: "Sala de apoio", ratio: "landscape" as const },
-    { label: "Produção de campanha", ratio: "portrait" as const },
-    { label: "Detalhe — Iluminação", ratio: "square" as const },
-    { label: "Backstage", ratio: "landscape" as const },
+    {
+      label: "Sala de apoio",
+      src: "/gallery/gallery-01.jpg",
+      ratio: "portrait" as const,
+    },
+    {
+      label: "Estúdio — luz e fundo infinito",
+      src: "/gallery/gallery-02.jpg",
+      ratio: "landscape" as const,
+    },
+    {
+      label: "Setup de iluminação",
+      src: "/gallery/gallery-03.jpg",
+      ratio: "landscape" as const,
+    },
+    {
+      label: "Identidade QUAD no espaço",
+      src: "/gallery/gallery-04.jpg",
+      ratio: "portrait" as const,
+    },
+    {
+      label: "Detalhe — marca QUAD",
+      src: "/gallery/gallery-05.jpg",
+      ratio: "square" as const,
+    },
+    {
+      label: "Detalhe — softbox aceso",
+      src: "/gallery/gallery-06.jpg",
+      ratio: "landscape" as const,
+    },
   ],
 };
 

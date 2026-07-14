@@ -1,11 +1,18 @@
-import { Placeholder } from "@/components/ui/Placeholder";
+import Image from "next/image";
 import { Reveal } from "@/components/ui/Reveal";
+import { contact } from "@/config/site";
 import { gallery } from "@/lib/content";
 
 const spanClasses = {
   portrait: "md:row-span-2",
   landscape: "md:col-span-2",
   square: "",
+} as const;
+
+const aspectClasses = {
+  portrait: "aspect-[3/4]",
+  landscape: "aspect-[4/3]",
+  square: "aspect-square",
 } as const;
 
 export function Gallery() {
@@ -22,7 +29,7 @@ export function Gallery() {
             </h2>
           </div>
           <a
-            href={`https://instagram.com`}
+            href={contact.instagramUrl}
             className="shrink-0 text-sm text-ink-soft underline decoration-line underline-offset-4 transition-colors hover:text-ink"
           >
             Ver mais no Instagram
@@ -36,11 +43,18 @@ export function Gallery() {
               delay={(index % 4) * 0.06}
               className={`h-full ${spanClasses[item.ratio]}`}
             >
-              <Placeholder
-                label={item.label}
-                ratio={item.ratio}
-                className="h-full w-full"
-              />
+              <div
+                className={`relative w-full overflow-hidden border border-line md:h-full ${aspectClasses[item.ratio]} md:aspect-auto`}
+              >
+                <Image
+                  src={item.src}
+                  alt={item.label}
+                  fill
+                  loading="lazy"
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  className="object-cover"
+                />
+              </div>
             </Reveal>
           ))}
         </div>
