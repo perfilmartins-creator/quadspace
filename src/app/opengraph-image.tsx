@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { site } from "@/config/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -20,7 +21,7 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ display: "flex", fontSize: 32, letterSpacing: -0.5 }}>
-          QUAD SPACE
+          {site.name}
         </div>
         <div
           style={{

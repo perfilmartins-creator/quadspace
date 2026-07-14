@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
+import { address, site } from "@/config/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -14,10 +15,24 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
-const siteUrl = "https://quadspace.com.br";
-const siteTitle = "QUAD SPACE — Estúdio e espaço para criação";
-const siteDescription =
-  "QUAD SPACE é um estúdio e espaço para criação em São Paulo: fotografia, audiovisual, campanhas, produção de conteúdo, direção de arte e workshops. Suas ideias encontraram um lugar.";
+const siteUrl = site.url;
+const siteTitle = site.seoTitle;
+const siteDescription = site.seoDescription;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  name: site.name,
+  url: siteUrl,
+  description: siteDescription,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: address.street,
+    addressLocality: address.city,
+    addressRegion: address.state,
+    addressCountry: address.country,
+  },
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -35,9 +50,9 @@ export const metadata: Metadata = {
     "direção de arte",
     "QUAD SPACE",
   ],
-  authors: [{ name: "QUAD SPACE" }],
-  creator: "QUAD SPACE",
-  applicationName: "QUAD SPACE",
+  authors: [{ name: site.name }],
+  creator: site.name,
+  applicationName: site.name,
   alternates: {
     canonical: "/",
   },
@@ -45,7 +60,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     url: siteUrl,
-    siteName: "QUAD SPACE",
+    siteName: site.name,
     title: siteTitle,
     description: siteDescription,
   },
@@ -83,6 +98,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="min-h-screen bg-paper font-sans text-ink antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <a
           href="#conteudo"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-full focus:bg-ink focus:px-5 focus:py-2.5 focus:text-sm focus:text-paper"
