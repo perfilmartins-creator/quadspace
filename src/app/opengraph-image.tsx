@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { site } from "@/config/site";
 
@@ -5,6 +7,10 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default function OpengraphImage() {
+  const mark = readFileSync(
+    join(process.cwd(), "public/brand/estrelas-branco.png")
+  ).toString("base64");
+
   return new ImageResponse(
     (
       <div
@@ -20,8 +26,19 @@ export default function OpengraphImage() {
           fontFamily: "serif",
         }}
       >
-        <div style={{ display: "flex", fontSize: 32, letterSpacing: -0.5 }}>
-          {site.name}
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 16 }}
+        >
+          <img
+            src={`data:image/png;base64,${mark}`}
+            width={72}
+            height={21}
+            style={{ objectFit: "contain" }}
+            alt=""
+          />
+          <span style={{ fontSize: 32, letterSpacing: -0.5 }}>
+            {site.name}
+          </span>
         </div>
         <div
           style={{

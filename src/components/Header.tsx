@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { nav, site } from "@/config/site";
@@ -12,10 +13,19 @@ export function Header() {
       <div className="container-edit flex items-center justify-between py-5">
         <Link
           href="#hero"
-          className="font-serif text-lg tracking-tight text-ink"
+          className="flex items-center gap-2.5 rounded-full border border-line/70 bg-paper/80 py-2 pr-4 pl-2.5 backdrop-blur-md"
           aria-label={`${site.name} — início`}
         >
-          QUAD SPACE
+          <Image
+            src="/brand/estrelas-preto.png"
+            alt=""
+            width={400}
+            height={117}
+            className="h-3.5 w-auto"
+          />
+          <span className="font-serif text-lg tracking-tight text-ink">
+            QUAD SPACE
+          </span>
         </Link>
 
         <nav

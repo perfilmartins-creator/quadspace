@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { address, buildWhatsappLink, contact, nav, site } from "@/config/site";
 import { footer } from "@/lib/content";
@@ -11,7 +12,16 @@ export function Footer() {
       <div className="container-edit">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
-            <p className="font-serif text-2xl tracking-tight">{site.name}</p>
+            <Image
+              src="/brand/estrelas-preto.png"
+              alt=""
+              width={400}
+              height={117}
+              className="h-4 w-auto"
+            />
+            <p className="mt-3 font-serif text-2xl tracking-tight">
+              {site.name}
+            </p>
             <p className="mt-4 max-w-xs text-balance text-ink-soft">
               {footer.tagline}
             </p>
