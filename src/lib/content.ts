@@ -3,8 +3,9 @@
 export const hero = {
   eyebrow: "Estúdio & espaço para criação — Recife",
   headline: ["Suas ideias", "encontraram", "um lugar."],
-  body: "A QUAD é um estúdio em Recife para fotografia, vídeo, conteúdo, campanhas, workshops e projetos criativos.",
-  ctaPrimary: { label: "Conheça o espaço", href: "#espaco" },
+  body: "Estúdio em Recife para fotografia, vídeo, conteúdo, campanhas, workshops e projetos criativos.",
+  priceHint: "Locações a partir de R$ 90.",
+  ctaPrimary: { label: "Ver valores", href: "#valores" },
   ctaSecondary: { label: "Reservar horário", href: "#reserva" },
   image: {
     src: "/hero/hero.jpg",
@@ -15,37 +16,27 @@ export const hero = {
 export const spaceSection = {
   kicker: "O Espaço",
   lines: [
-    "Um espaço de 30 m² pensado para criar,",
-    "produzir, testar e transformar ideias em imagem.",
+    "30 m² para fotografar, gravar,",
+    "testar e transformar ideias em imagem.",
   ],
-  body: "Fotografia, vídeo, campanhas e conteúdo dividem o mesmo endereço na Av. Conselheiro Aguiar, no Pina — sem sobrar nada entre a ideia e o resultado.",
+  body: "Uma estrutura compacta, flexível e pronta para receber ensaios, campanhas, vídeos, conteúdo e workshops — na Av. Conselheiro Aguiar, no Pina.",
 };
 
 export const structure = {
   kicker: "Estrutura",
-  title: "O essencial, bem resolvido.",
-  categories: [
-    {
-      title: "Espaço",
-      items: ["30 m²", "Ar-condicionado", "Fundos fotográficos", "Mesa de apoio"],
-    },
-    {
-      title: "Equipamentos",
-      items: [
-        "Flashes de estúdio",
-        "Equipamentos de iluminação",
-        "Estrutura para fotografia e vídeo",
-        "Internet Wi-Fi",
-      ],
-    },
-    {
-      title: "Conforto",
-      items: [
-        "Sala de apoio com sofá e TV",
-        "Estacionamento no local",
-      ],
-    },
-  ],
+  title: "Tudo que entra em cena.",
+  subtitle:
+    "Equipamentos, fundos e espaços de apoio disponíveis para a sua produção.",
+};
+
+export const pricing = {
+  kicker: "Valores",
+  title: "Seu tempo. Seu projeto. Seu espaço.",
+  body: "Escolha o período que faz sentido para a sua produção. Quanto mais horas, menor o valor por hora.",
+  highlight: "A partir de R$ 90.",
+  featuredLabel: "Mais escolhido",
+  ctaPlan: "Reservar este período",
+  note: "Consulte disponibilidade, condições de reserva e períodos adicionais pelo WhatsApp.",
 };
 
 export const possibilities = {
@@ -133,22 +124,43 @@ export const faq = {
   title: "Perguntas frequentes.",
   items: [
     {
-      question: "Como funciona a reserva?",
+      question: "Qual é o valor da locação?",
       answer:
-        "Você entra em contato pelo WhatsApp com a data e o tipo de produção. Confirmamos disponibilidade e alinhamos os detalhes por lá.",
+        "As locações começam em R$ 90 por uma hora. Também oferecemos períodos maiores com desconto progressivo. Consulte a tabela de valores ou fale com a gente pelo WhatsApp.",
     },
     {
-      question: "O que está incluso na locação?",
+      question: "Existem descontos para períodos maiores?",
       answer:
-        "Espaço de 30 m², ar-condicionado, flashes e iluminação de estúdio, fundos fotográficos, mesa de apoio, Wi-Fi e sala de apoio com sofá e TV.",
+        "Sim. O valor médio por hora diminui nos planos com maior duração. Os valores atualizados estão disponíveis na seção de preços.",
     },
     {
-      question: "Qual é o tamanho do estúdio?",
-      answer: "30 m².",
+      question: "Quais equipamentos estão disponíveis?",
+      answer:
+        "Iluminação Godox, Nanlite e Sokani, softboxes Triopo, sombrinha e tripés de aço inox. A lista completa está na seção Estrutura.",
     },
     {
-      question: "O espaço possui ar-condicionado?",
+      question: "Os equipamentos estão inclusos na locação?",
+      answer: "Sim, todos os equipamentos listados na seção Estrutura estão inclusos no valor da locação.",
+    },
+    {
+      question: "Quais fundos estão disponíveis?",
+      answer: "O estúdio conta com fundo branco e fundo preto.",
+    },
+    {
+      question: "O estúdio possui ar-condicionado?",
       answer: "Sim, o ambiente é climatizado.",
+    },
+    {
+      question: "O espaço possui Wi-Fi?",
+      answer: "Sim, Wi-Fi disponível durante toda a locação.",
+    },
+    {
+      question: "O estúdio oferece café e água?",
+      answer: "Sim. Café e água ficam disponíveis durante a locação.",
+    },
+    {
+      question: "Existe estacionamento no local?",
+      answer: "Sim, há estacionamento no local.",
     },
     {
       question: "Posso levar meus próprios equipamentos?",
@@ -160,7 +172,7 @@ export const faq = {
       answer: "Sim, sem restrição de número de pessoas combinado previamente pelo WhatsApp.",
     },
     {
-      question: "O espaço serve para vídeo?",
+      question: "O espaço serve para gravação de vídeo?",
       answer:
         "Sim. A estrutura atende tanto fotografia quanto produções em vídeo, incluindo videoclipes e entrevistas.",
     },
@@ -169,17 +181,13 @@ export const faq = {
       answer: "Sim, o espaço recebe workshops e encontros criativos.",
     },
     {
-      question: "O estacionamento está incluso?",
-      answer: "Sim, há estacionamento no local.",
-    },
-    {
-      question: "Como consultar datas disponíveis?",
+      question: "Como consultar disponibilidade?",
       answer: "Fale com a gente pelo WhatsApp — é o canal mais rápido para checar a agenda.",
     },
     {
-      question: "Como funciona cancelamento ou reagendamento?",
+      question: "Como funcionam cancelamento e reagendamento?",
       answer:
-        "Condições de cancelamento e reagendamento são combinadas na confirmação da reserva. Confirme os detalhes diretamente pelo WhatsApp.",
+        "As condições de cancelamento e reagendamento devem ser confirmadas no momento da reserva pelo WhatsApp.",
     },
   ],
 };
@@ -187,7 +195,8 @@ export const faq = {
 export const booking = {
   kicker: "Reserva",
   title: "Seu próximo projeto pode começar aqui.",
-  body: "Conte pra gente o que você quer criar e consulte as datas disponíveis.",
+  body: "Escolha o período, consulte a data e fale diretamente com a QUAD.",
+  highlight: "A partir de R$ 90.",
   ctaBooking: "Reservar pelo WhatsApp",
   ctaQuestion: "Tirar dúvidas",
 };
