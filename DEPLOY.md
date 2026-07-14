@@ -113,9 +113,9 @@ antigo) ou outro provedor:
       em `src/config/site.ts`.
 - [ ] Preencher `contact.mapsUrl` em `src/config/site.ts` com o link oficial
       do Google Maps (Google Maps → Compartilhar → Copiar link).
-- [ ] Substituir os blocos `<Placeholder />` pelas fotos reais do espaço —
-      ver `public/gallery/README.md` para nomes, proporções e onde trocar
-      no código.
+- [ ] Hero e Galeria já usam fotos reais do estúdio. Falta apenas uma foto
+      de fachada/entrada para a seção Localização (`public/location/`) —
+      ver `public/gallery/README.md`.
 - [ ] Configurar o domínio `quadspace.com.br` + redirect de `www` na Vercel
       (seção 3 acima).
 - [ ] Rodar `npm run lint`, `npx tsc --noEmit` e `npm run build` uma última

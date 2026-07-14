@@ -60,11 +60,11 @@ src/
   publicar.
 - **Copy de cada seção** (títulos, textos, perguntas do FAQ) fica em
   `src/lib/content.ts`.
-- **Fotos** ainda não existem — o componente `Placeholder`
-  (`src/components/ui/Placeholder.tsx`) renderiza um bloco identificado com a
-  etiqueta "Placeholder" e uma legenda descrevendo qual foto deve entrar ali.
-  Ver `public/gallery/README.md` para nomes de arquivo, proporções e onde
-  trocar `<Placeholder />` por `next/image` em cada componente.
+- **Fotos**: Hero e Galeria já usam fotos reais do estúdio (`public/hero/`,
+  `public/gallery/`). Só a seção Localização ainda usa o componente
+  `Placeholder` (`src/components/ui/Placeholder.tsx`), esperando uma foto de
+  fachada/entrada. Ver `public/gallery/README.md` para nomes de arquivo,
+  proporções e onde trocar cada imagem.
 - **Reserva** funciona por WhatsApp: os botões da seção "Reserva" abrem
   `https://wa.me/<numero>?text=...` usando `contact.whatsappNumber` e as
   mensagens padrão definidas em `src/config/site.ts`. Enquanto o número não
