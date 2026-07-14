@@ -1,6 +1,8 @@
 # QUAD SPACE — Website
 
-Site institucional da QUAD SPACE, estúdio e espaço para criação (fotografia, audiovisual, campanhas, produção de conteúdo, direção de arte e workshops).
+Site institucional da QUAD SPACE, estúdio e espaço para criação (fotografia,
+vídeo, campanhas, produção de conteúdo, direção de arte e workshops) em
+Recife, PE.
 
 > "Suas ideias encontraram um lugar."
 
@@ -23,9 +25,10 @@ Abra [http://localhost:3000](http://localhost:3000).
 Outros comandos:
 
 ```bash
-npm run lint    # ESLint
-npm run build   # build de produção
-npm run start   # serve o build de produção
+npm run lint         # ESLint
+npx tsc --noEmit     # checagem de tipos
+npm run build        # build de produção
+npm run start        # serve o build de produção
 ```
 
 ## Estrutura do projeto
@@ -33,37 +36,42 @@ npm run start   # serve o build de produção
 ```
 src/
   app/
-    layout.tsx       # fontes, metadata/SEO, viewport
-    page.tsx          # composição das seções da home
-    globals.css        # design tokens (Tailwind v4 @theme)
+    layout.tsx          # fontes, metadata/SEO, JSON-LD, viewport
+    page.tsx             # composição das seções da home
+    privacidade/         # página de política de privacidade
+    globals.css          # design tokens (Tailwind v4 @theme)
     sitemap.ts / robots.ts
+  config/
+    site.ts               # marca, endereço, contato, WhatsApp, Maps, nav
   components/
     Header.tsx / Footer.tsx
-    sections/          # Hero, Manifesto, Space, Structure, Gallery, FAQ, Booking
-    ui/                 # Reveal (animação), Placeholder (imagem placeholder)
+    sections/              # Hero, Space, Structure, Possibilities, Gallery,
+                            # Location, FAQ, Booking
+    ui/                     # Reveal (animação), Placeholder (imagem placeholder)
   lib/
-    content.ts          # todo o copy do site em um único lugar
+    content.ts               # todo o copy do site
 ```
 
-## Conteúdo e placeholders
+## Conteúdo, contato e placeholders
 
-Todo o texto do site está centralizado em `src/lib/content.ts`. Campos marcados
-com `// PLACEHOLDER` (endereço, metragem, telefone etc.) precisam ser
-confirmados/substituídos pelos dados reais da QUAD SPACE antes de publicar.
-
-As imagens ainda não existem — o componente `Placeholder`
-(`src/components/ui/Placeholder.tsx`) renderiza um bloco identificado com a
-etiqueta "Placeholder" e uma legenda descrevendo qual foto deve entrar ali.
-Para substituir por fotos reais, troque o uso de `<Placeholder />` por
-`next/image` apontando para o arquivo em `public/`.
-
-O formulário de "Reserva" não tem backend: ao enviar, ele monta um link
-`mailto:` com os dados preenchidos e abre o cliente de e-mail do usuário. Se
-quiser um formulário com envio direto (ex.: Resend, Formspree, API route
-própria), é só trocar o `handleSubmit` em
-`src/components/sections/Booking.tsx`.
+- **Dados de marca e contato** (endereço, e-mail, Instagram, WhatsApp, link
+  do Google Maps) ficam centralizados em `src/config/site.ts`. Campos ainda
+  não confirmados estão marcados com `// PLACEHOLDER` — preencha antes de
+  publicar.
+- **Copy de cada seção** (títulos, textos, perguntas do FAQ) fica em
+  `src/lib/content.ts`.
+- **Fotos** ainda não existem — o componente `Placeholder`
+  (`src/components/ui/Placeholder.tsx`) renderiza um bloco identificado com a
+  etiqueta "Placeholder" e uma legenda descrevendo qual foto deve entrar ali.
+  Ver `public/gallery/README.md` para nomes de arquivo, proporções e onde
+  trocar `<Placeholder />` por `next/image` em cada componente.
+- **Reserva** funciona por WhatsApp: os botões da seção "Reserva" abrem
+  `https://wa.me/<numero>?text=...` usando `contact.whatsappNumber` e as
+  mensagens padrão definidas em `src/config/site.ts`. Enquanto o número não
+  for preenchido, os botões caem para `mailto:` como alternativa segura (para
+  não enviar mensagens a um número de terceiros por engano).
 
 ## Deploy
 
-Veja [DEPLOY.md](./DEPLOY.md) para o passo a passo de publicação (GitHub +
-Vercel).
+Veja [DEPLOY.md](./DEPLOY.md) para o passo a passo de publicação (Vercel +
+domínio `quadspace.com.br` via Hostinger).
