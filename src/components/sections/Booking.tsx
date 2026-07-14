@@ -17,7 +17,7 @@ export function Booking() {
             <p className="mb-6 text-sm tracking-tight text-paper/60">
               {booking.kicker}
             </p>
-            <h2 className="mb-6 text-balance font-serif text-4xl leading-[1.05] tracking-tightest sm:text-5xl lg:text-6xl">
+            <h2 className="mb-6 text-balance font-light text-4xl leading-[1.05] tracking-tightest sm:text-5xl lg:text-6xl">
               {booking.title}
             </h2>
             <p className="max-w-md text-balance text-lg leading-relaxed text-paper/70">
@@ -33,7 +33,7 @@ export function Booking() {
               >
                 {booking.ctaBooking}
               </a>
-              <p className="font-serif text-lg tracking-tight">
+              <p className="text-lg tracking-tight">
                 {booking.highlight}
               </p>
             </div>

@@ -24,7 +24,7 @@ export function Gallery() {
             <p className="mb-6 text-sm tracking-tight text-ink-soft">
               {gallery.kicker}
             </p>
-            <h2 className="max-w-xl text-balance font-serif text-4xl leading-[1.05] tracking-tightest sm:text-5xl">
+            <h2 className="max-w-xl text-balance font-light text-4xl leading-[1.05] tracking-tightest sm:text-5xl">
               {gallery.title}
             </h2>
           </div>

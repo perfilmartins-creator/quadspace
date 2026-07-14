@@ -35,7 +35,7 @@ export function Pricing() {
             <p className="mb-6 text-sm tracking-tight text-ink-soft">
               {pricing.kicker}
             </p>
-            <h2 className="max-w-lg text-balance font-serif text-4xl leading-[1.05] tracking-tightest sm:text-5xl">
+            <h2 className="max-w-lg text-balance font-light text-4xl leading-[1.05] tracking-tightest sm:text-5xl">
               {pricing.title}
             </h2>
           </Reveal>
@@ -44,7 +44,7 @@ export function Pricing() {
             <p className="max-w-md text-balance text-lg leading-relaxed text-ink-soft">
               {pricing.body}
             </p>
-            <p className="mt-4 font-serif text-2xl tracking-tight">
+            <p className="mt-4 text-2xl tracking-tight">
               {pricing.highlight}
             </p>
           </Reveal>
@@ -68,7 +68,7 @@ export function Pricing() {
               }`}
             >
               <div className="col-span-3">
-                <p className="font-serif text-2xl tracking-tight">
+                <p className="text-2xl tracking-tight">
                   {plan.label}
                 </p>
                 {plan.featured && (
@@ -110,7 +110,7 @@ export function Pricing() {
               }`}
             >
               <div className="flex items-baseline justify-between gap-4">
-                <p className="font-serif text-3xl tracking-tight">
+                <p className="text-3xl tracking-tight">
                   {plan.label}
                 </p>
                 <p className="text-xl">{formatBRL(plan.price)}</p>

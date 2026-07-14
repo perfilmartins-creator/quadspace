@@ -1,17 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Poppins } from "next/font/google";
 import { address, site } from "@/config/site";
 import "./globals.css";
 
-const inter = Inter({
+const poppins = Poppins({
   subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
+  weight: ["300", "400"],
+  variable: "--font-poppins",
   display: "swap",
 });
 
@@ -96,8 +91,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${fraunces.variable}`}>
-      <body className="min-h-screen bg-paper font-sans text-ink antialiased">
+    <html lang="pt-BR" className={poppins.variable}>
+      <body className="min-h-screen bg-paper font-sans font-normal text-ink antialiased">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

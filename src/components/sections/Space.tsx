@@ -12,7 +12,7 @@ export function Space() {
         </Reveal>
 
         <Reveal delay={0.05}>
-          <h2 className="max-w-4xl text-balance font-serif text-4xl leading-[1.05] tracking-tightest sm:text-5xl lg:text-6xl">
+          <h2 className="max-w-4xl text-balance font-light text-4xl leading-[1.05] tracking-tightest sm:text-5xl lg:text-6xl">
             {spaceSection.lines.map((line) => (
               <span key={line} className="block">
                 {line}

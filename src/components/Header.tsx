@@ -36,14 +36,14 @@ export function Header() {
             width={48}
             height={14}
           />
-          <span className="font-serif text-lg tracking-tight text-ink">
+          <span className="text-lg tracking-tight whitespace-nowrap text-ink">
             QUAD SPACE
           </span>
         </Link>
 
         <nav
           aria-label="Navegação principal"
-          className="hidden items-center gap-8 md:flex"
+          className="hidden items-center gap-6 lg:flex lg:gap-8"
         >
           {nav.map((item) => (
             <a
@@ -69,7 +69,7 @@ export function Header() {
             aria-expanded={isMenuOpen}
             aria-controls="menu-mobile"
             aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
-            className="flex h-11 w-11 items-center justify-center border border-ink md:hidden"
+            className="flex h-11 w-11 items-center justify-center border border-ink lg:hidden"
           >
             <span className="relative block h-3 w-4">
               <span
@@ -91,7 +91,7 @@ export function Header() {
 
       <div
         id="menu-mobile"
-        className={`overflow-hidden bg-paper transition-[max-height] duration-300 ease-out md:hidden ${
+        className={`overflow-hidden bg-paper transition-[max-height] duration-300 ease-out lg:hidden ${
           isMenuOpen ? "max-h-[32rem]" : "max-h-0"
         }`}
       >

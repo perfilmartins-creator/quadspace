@@ -14,7 +14,7 @@ export function Location() {
           </Reveal>
 
           <Reveal delay={0.05} className="lg:col-span-7 lg:col-start-6">
-            <h2 className="text-balance font-serif text-4xl leading-[1.05] tracking-tightest sm:text-5xl lg:text-6xl">
+            <h2 className="text-balance font-light text-4xl leading-[1.05] tracking-tightest sm:text-5xl lg:text-6xl">
               {location.title}
             </h2>
             <p className="mt-3 text-lg text-ink-soft">{location.subtitle}</p>

@@ -1,8 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 
   --color-paper: #ffffff;
   --color-ink: #000000;
@@ -11,8 +10,8 @@
   --color-line: rgb(0 0 0 / 12%);
   --color-line-on-ink: rgb(255 255 255 / 20%);
 
-  --tracking-tightest: -0.045em;
-  --tracking-tight: -0.02em;
+  --tracking-tightest: -0.02em;
+  --tracking-tight: -0.01em;
 }
 
 @layer base {

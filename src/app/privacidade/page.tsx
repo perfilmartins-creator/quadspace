@@ -17,7 +17,7 @@ export default function PrivacidadePage() {
         ← Voltar para o site
       </Link>
 
-      <h1 className="mt-8 text-balance font-serif text-4xl leading-[1.05] tracking-tightest sm:text-5xl">
+      <h1 className="mt-8 text-balance font-light text-4xl leading-[1.05] tracking-tightest sm:text-5xl">
         Política de privacidade
       </h1>
 

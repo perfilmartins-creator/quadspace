@@ -12,7 +12,7 @@ export function Hero() {
           <p className="mb-6 text-sm tracking-tight text-ink-soft">
             {hero.eyebrow}
           </p>
-          <h1 className="text-balance font-serif text-[16vw] leading-[0.92] tracking-tightest text-ink sm:text-[10vw] lg:text-[6.2vw]">
+          <h1 className="text-balance font-light text-[12.5vw] leading-[1.02] tracking-tightest text-ink sm:text-[10vw] lg:text-[6.2vw]">
             {hero.headline.map((line) => (
               <span key={line} className="block">
                 {line}

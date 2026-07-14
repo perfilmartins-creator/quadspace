@@ -18,7 +18,7 @@ export function Footer() {
               width={55}
               height={16}
             />
-            <p className="mt-3 font-serif text-2xl tracking-tight">
+            <p className="mt-3 text-2xl tracking-tight">
               {site.name}
             </p>
             <p className="mt-4 max-w-xs text-balance text-ink-soft">

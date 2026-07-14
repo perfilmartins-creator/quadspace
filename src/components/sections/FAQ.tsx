@@ -27,7 +27,7 @@ function FAQItem({
           aria-controls={panelId}
           className="flex w-full items-center justify-between gap-6 py-7 text-left sm:py-8"
         >
-          <span className="text-balance font-serif text-xl leading-snug tracking-tight sm:text-2xl lg:text-[1.85rem]">
+          <span className="text-balance font-light text-xl leading-snug tracking-tight sm:text-2xl lg:text-[1.85rem]">
             {question}
           </span>
           <span
@@ -66,7 +66,7 @@ export function FAQ() {
           <p className="mb-6 text-sm tracking-tight text-ink-soft">
             {faq.kicker}
           </p>
-          <h2 className="max-w-2xl text-balance font-serif text-4xl leading-[1.05] tracking-tightest sm:text-5xl lg:text-6xl">
+          <h2 className="max-w-2xl text-balance font-light text-4xl leading-[1.05] tracking-tightest sm:text-5xl lg:text-6xl">
             {faq.title}
           </h2>
         </Reveal>

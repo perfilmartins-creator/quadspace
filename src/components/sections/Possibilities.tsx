@@ -10,7 +10,7 @@ export function Possibilities() {
             <p className="mb-6 text-sm tracking-tight text-ink-soft">
               {possibilities.kicker}
             </p>
-            <h2 className="text-balance font-serif text-4xl leading-[1.05] tracking-tightest sm:text-5xl">
+            <h2 className="text-balance font-light text-4xl leading-[1.05] tracking-tightest sm:text-5xl">
               {possibilities.title}
             </h2>
             <p className="mt-6 max-w-xs text-balance leading-relaxed text-ink-soft">
@@ -19,7 +19,7 @@ export function Possibilities() {
           </Reveal>
 
           <Reveal delay={0.05} className="lg:col-span-7 lg:col-start-6">
-            <p className="text-balance font-serif text-3xl leading-[1.2] tracking-tight text-ink sm:text-4xl">
+            <p className="text-balance text-3xl leading-[1.2] tracking-tight text-ink sm:text-4xl">
               {possibilities.items.map((item, index) => (
                 <span key={item}>
                   {item}
@@ -29,7 +29,7 @@ export function Possibilities() {
                 </span>
               ))}
             </p>
-            <p className="mt-12 border-t border-line pt-8 text-balance font-serif text-lg leading-relaxed text-ink">
+            <p className="mt-12 border-t border-line pt-8 text-balance text-lg leading-relaxed text-ink">
               {possibilities.tagline}
             </p>
           </Reveal>
