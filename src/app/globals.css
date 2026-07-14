@@ -4,29 +4,15 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 
-  --color-paper: #fbf9f4;
-  --color-paper-dim: #f2eee3;
-  --color-ink: #15140f;
-  --color-ink-soft: #57534a;
-  --color-ink-faint: #8a8578;
-  --color-line: #e2ddd0;
-  --color-line-on-ink: #322f26;
-  --color-clay: #a8420f;
-  --color-clay-soft: #c9714a;
+  --color-paper: #ffffff;
+  --color-ink: #000000;
+  --color-ink-soft: rgb(0 0 0 / 68%);
+  --color-ink-faint: rgb(0 0 0 / 42%);
+  --color-line: rgb(0 0 0 / 12%);
+  --color-line-on-ink: rgb(255 255 255 / 20%);
 
   --tracking-tightest: -0.045em;
   --tracking-tight: -0.02em;
-
-  --animate-marquee: marquee 32s linear infinite;
-
-  @keyframes marquee {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
 }
 
 @layer base {
@@ -44,12 +30,12 @@
   }
 
   ::selection {
-    background-color: var(--color-clay);
+    background-color: var(--color-ink);
     color: var(--color-paper);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-clay);
+    outline: 2px solid currentColor;
     outline-offset: 3px;
   }
 
