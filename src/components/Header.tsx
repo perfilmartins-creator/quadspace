@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { nav, site } from "@/lib/content";
+import { nav, site } from "@/config/site";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

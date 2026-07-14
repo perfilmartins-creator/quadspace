@@ -1,4 +1,5 @@
 import { Placeholder } from "@/components/ui/Placeholder";
+import { hero } from "@/lib/content";
 
 export function Hero() {
   return (
@@ -9,34 +10,33 @@ export function Hero() {
       <div className="container-edit grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-end lg:gap-8">
         <div className="lg:col-span-7">
           <p className="mb-6 text-sm tracking-tight text-ink-soft">
-            Estúdio &amp; espaço para criação — São Paulo
+            {hero.eyebrow}
           </p>
           <h1 className="text-balance font-serif text-[13vw] leading-[0.95] tracking-tightest text-ink sm:text-[9vw] lg:text-[5.4vw]">
-            Suas ideias
-            <br />
-            encontraram
-            <br />
-            um lugar.
+            {hero.headline.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
           </h1>
         </div>
 
         <div className="flex flex-col justify-end gap-8 lg:col-span-5">
           <p className="max-w-md text-balance text-lg text-ink-soft">
-            Fotografia, audiovisual, campanhas e produção de conteúdo dividem
-            o mesmo endereço — pensado para quem leva a criação a sério.
+            {hero.body}
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <a
-              href="#reserva"
+              href={hero.ctaSecondary.href}
               className="rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-colors hover:bg-clay"
             >
-              Reservar o espaço
+              {hero.ctaSecondary.label}
             </a>
             <a
-              href="#espaco"
+              href={hero.ctaPrimary.href}
               className="rounded-full border border-line px-7 py-3.5 text-sm text-ink transition-colors hover:border-ink"
             >
-              Conhecer o espaço
+              {hero.ctaPrimary.label}
             </a>
           </div>
         </div>
