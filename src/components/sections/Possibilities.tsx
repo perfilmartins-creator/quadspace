@@ -29,7 +29,7 @@ export function Possibilities() {
                 </span>
               ))}
             </p>
-            <p className="mt-12 border-t border-line pt-8 text-balance text-lg leading-relaxed text-clay">
+            <p className="mt-12 border-t border-line pt-8 text-balance font-serif text-lg leading-relaxed text-ink">
               {possibilities.tagline}
             </p>
           </Reveal>

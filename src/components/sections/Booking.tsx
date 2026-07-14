@@ -24,24 +24,28 @@ export function Booking() {
               {booking.body}
             </p>
 
-            <div className="mt-10 flex flex-wrap items-center gap-4">
+            <div className="mt-10 flex flex-wrap items-center gap-6">
               <a
                 href={bookingHref}
                 target={whatsappBookingHref ? "_blank" : undefined}
                 rel={whatsappBookingHref ? "noopener noreferrer" : undefined}
-                className="rounded-full bg-paper px-7 py-3.5 text-sm text-ink transition-colors hover:bg-clay hover:text-paper"
+                className="border border-paper bg-paper px-7 py-3.5 text-sm text-ink transition-colors hover:bg-ink hover:text-paper"
               >
                 {booking.ctaBooking}
               </a>
-              <a
-                href={questionHref}
-                target={whatsappQuestionHref ? "_blank" : undefined}
-                rel={whatsappQuestionHref ? "noopener noreferrer" : undefined}
-                className="rounded-full border border-line-on-ink px-7 py-3.5 text-sm text-paper transition-colors hover:border-paper"
-              >
-                {booking.ctaQuestion}
-              </a>
+              <p className="font-serif text-lg tracking-tight">
+                {booking.highlight}
+              </p>
             </div>
+
+            <a
+              href={questionHref}
+              target={whatsappQuestionHref ? "_blank" : undefined}
+              rel={whatsappQuestionHref ? "noopener noreferrer" : undefined}
+              className="mt-6 inline-block text-sm text-paper/60 underline decoration-line-on-ink underline-offset-4 transition-colors hover:text-paper"
+            >
+              {booking.ctaQuestion}
+            </a>
 
             {!whatsappBookingHref && (
               <p className="mt-6 text-sm text-paper/50">
@@ -51,10 +55,7 @@ export function Booking() {
             )}
           </Reveal>
 
-          <Reveal
-            delay={0.05}
-            className="lg:col-span-4 lg:col-start-9"
-          >
+          <Reveal delay={0.05} className="lg:col-span-4 lg:col-start-9">
             <dl className="space-y-4 border-t border-line-on-ink pt-8 text-sm text-paper/70">
               <div className="flex justify-between gap-4">
                 <dt>E-mail</dt>

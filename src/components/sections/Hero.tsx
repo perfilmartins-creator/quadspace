@@ -12,7 +12,7 @@ export function Hero() {
           <p className="mb-6 text-sm tracking-tight text-ink-soft">
             {hero.eyebrow}
           </p>
-          <h1 className="text-balance font-serif text-[13vw] leading-[0.95] tracking-tightest text-ink sm:text-[9vw] lg:text-[5.4vw]">
+          <h1 className="text-balance font-serif text-[16vw] leading-[0.92] tracking-tightest text-ink sm:text-[10vw] lg:text-[6.2vw]">
             {hero.headline.map((line) => (
               <span key={line} className="block">
                 {line}
@@ -22,37 +22,40 @@ export function Hero() {
         </div>
 
         <div className="flex flex-col justify-end gap-8 lg:col-span-5">
-          <p className="max-w-md text-balance text-lg text-ink-soft">
-            {hero.body}
-          </p>
+          <div>
+            <p className="max-w-md text-balance text-lg text-ink-soft">
+              {hero.body}
+            </p>
+            <p className="mt-4 text-sm tracking-tight text-ink">
+              {hero.priceHint}
+            </p>
+          </div>
           <div className="flex flex-wrap items-center gap-4">
             <a
-              href={hero.ctaSecondary.href}
-              className="rounded-full bg-ink px-7 py-3.5 text-sm text-paper transition-colors hover:bg-clay"
-            >
-              {hero.ctaSecondary.label}
-            </a>
-            <a
               href={hero.ctaPrimary.href}
-              className="rounded-full border border-line px-7 py-3.5 text-sm text-ink transition-colors hover:border-ink"
+              className="border border-ink bg-ink px-7 py-3.5 text-sm text-paper transition-colors hover:bg-paper hover:text-ink"
             >
               {hero.ctaPrimary.label}
+            </a>
+            <a
+              href={hero.ctaSecondary.href}
+              className="border border-ink px-7 py-3.5 text-sm text-ink transition-colors hover:bg-ink hover:text-paper"
+            >
+              {hero.ctaSecondary.label}
             </a>
           </div>
         </div>
       </div>
 
-      <div className="container-edit mt-16">
-        <div className="relative aspect-[4/3] w-full overflow-hidden border border-line sm:aspect-[16/9]">
-          <Image
-            src={hero.image.src}
-            alt={hero.image.alt}
-            fill
-            priority
-            sizes="(min-width: 1280px) 90rem, 100vw"
-            className="object-cover"
-          />
-        </div>
+      <div className="relative mt-16 aspect-[4/3] w-full overflow-hidden sm:aspect-[21/9]">
+        <Image
+          src={hero.image.src}
+          alt={hero.image.alt}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
       </div>
     </section>
   );

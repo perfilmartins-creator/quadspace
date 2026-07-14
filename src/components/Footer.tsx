@@ -15,9 +15,8 @@ export function Footer() {
             <Image
               src="/brand/estrelas-preto.png"
               alt=""
-              width={400}
-              height={117}
-              className="h-4 w-auto"
+              width={55}
+              height={16}
             />
             <p className="mt-3 font-serif text-2xl tracking-tight">
               {site.name}
@@ -67,7 +66,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col gap-4 border-t border-line pt-8 text-sm text-ink-faint sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 flex flex-col gap-4 border-t border-line pt-8 text-sm text-ink-soft sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {year} {site.name}. {footer.rights}
           </p>

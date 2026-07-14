@@ -42,7 +42,7 @@ export default function PrivacidadePage() {
           </a>
           .
         </p>
-        <p className="text-sm text-ink-faint">
+        <p className="text-sm text-ink-soft">
           Este texto é um resumo simples e não substitui uma política de
           privacidade revisada por um profissional jurídico.
         </p>
