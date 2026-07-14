@@ -103,6 +103,21 @@ export const gallery = {
       src: "/gallery/gallery-06.jpg",
       ratio: "landscape" as const,
     },
+    {
+      label: "Vista geral — sofá e identidade QUAD",
+      src: "/gallery/gallery-07.jpg",
+      ratio: "portrait" as const,
+    },
+    {
+      label: "Fundo infinito e identidade QUAD",
+      src: "/gallery/gallery-08.jpg",
+      ratio: "portrait" as const,
+    },
+    {
+      label: "Setup de iluminação — outro ângulo",
+      src: "/gallery/gallery-09.jpg",
+      ratio: "landscape" as const,
+    },
   ],
 };
 
