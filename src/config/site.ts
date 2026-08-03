@@ -24,9 +24,8 @@ export const address = {
 export const contact = {
   // PLACEHOLDER — confirmar e-mail oficial da QUAD SPACE
   email: "contato@quadspace.com.br",
-  // PLACEHOLDER — confirmar @ oficial do Instagram
-  instagramHandle: "@quadspace",
-  instagramUrl: "https://instagram.com/quadspace",
+  instagramHandle: "@quad___space",
+  instagramUrl: "https://instagram.com/quad___space",
   whatsappNumber: "5581994494037",
   whatsappMessageBooking:
     "Olá! Vim pelo site da QUAD SPACE e gostaria de consultar a disponibilidade do estúdio.",
