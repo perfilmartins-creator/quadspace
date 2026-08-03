@@ -27,10 +27,7 @@ export const contact = {
   // PLACEHOLDER — confirmar @ oficial do Instagram
   instagramHandle: "@quadspace",
   instagramUrl: "https://instagram.com/quadspace",
-  // PLACEHOLDER — número oficial de WhatsApp, apenas dígitos com DDI+DDD (ex: 5581999999999).
-  // Deixado em branco de propósito: sem o número real, um link wa.me poderia
-  // acidentalmente notificar um número de terceiro. Preencha antes de publicar.
-  whatsappNumber: "",
+  whatsappNumber: "5581994494037",
   whatsappMessageBooking:
     "Olá! Vim pelo site da QUAD SPACE e gostaria de consultar a disponibilidade do estúdio.",
   whatsappMessageQuestion:
