@@ -197,6 +197,8 @@ export const booking = {
   title: "Seu próximo projeto pode começar aqui.",
   body: "Escolha o período, consulte a data e fale diretamente com a QUAD.",
   highlight: "A partir de R$ 90.",
+  dateLabel: "Data desejada",
+  timeLabel: "Horário",
   ctaBooking: "Reservar pelo WhatsApp",
   ctaQuestion: "Tirar dúvidas",
 };

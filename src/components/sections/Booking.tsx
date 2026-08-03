@@ -1,9 +1,29 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import { Reveal } from "@/components/ui/Reveal";
 import { address, buildWhatsappLink, contact } from "@/config/site";
 import { booking } from "@/lib/content";
 
+function formatDateBR(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}/${month}/${year}`;
+}
+
 export function Booking() {
-  const whatsappBookingHref = buildWhatsappLink(contact.whatsappMessageBooking);
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+
+  const bookingMessage = useMemo(() => {
+    if (!date && !time) return contact.whatsappMessageBooking;
+    const details = [
+      date && `Data desejada: ${formatDateBR(date)}`,
+      time && `Horário: ${time}`,
+    ].filter(Boolean);
+    return `${contact.whatsappMessageBooking} ${details.join(", ")}.`;
+  }, [date, time]);
+
+  const whatsappBookingHref = buildWhatsappLink(bookingMessage);
   const whatsappQuestionHref = buildWhatsappLink(contact.whatsappMessageQuestion);
 
   const bookingHref = whatsappBookingHref ?? `mailto:${contact.email}`;
@@ -24,7 +44,28 @@ export function Booking() {
               {booking.body}
             </p>
 
-            <div className="mt-10 flex flex-wrap items-center gap-6">
+            <div className="mt-10 flex flex-wrap gap-4">
+              <label className="flex flex-col gap-2 text-sm text-paper/60">
+                {booking.dateLabel}
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(event) => setDate(event.target.value)}
+                  className="border border-paper/30 bg-transparent px-4 py-3 text-paper accent-paper [color-scheme:dark]"
+                />
+              </label>
+              <label className="flex flex-col gap-2 text-sm text-paper/60">
+                {booking.timeLabel}
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(event) => setTime(event.target.value)}
+                  className="border border-paper/30 bg-transparent px-4 py-3 text-paper accent-paper [color-scheme:dark]"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-6">
               <a
                 href={bookingHref}
                 target={whatsappBookingHref ? "_blank" : undefined}
