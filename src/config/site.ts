@@ -118,8 +118,8 @@ export const equipment: EquipmentCategory[] = [
 
 export const nav = [
   { label: "Reserva", href: "#reserva" },
-  { label: "Estrutura", href: "#estrutura" },
   { label: "Valores", href: "#valores" },
+  { label: "Estrutura", href: "#estrutura" },
   { label: "Possibilidades", href: "#possibilidades" },
   { label: "Galeria", href: "#galeria" },
   { label: "FAQ", href: "#faq" },

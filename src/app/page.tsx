@@ -16,8 +16,8 @@ export default function Home() {
       <main id="conteudo" className="flex flex-col">
         <Hero />
         <Booking />
-        <Structure />
         <Pricing />
+        <Structure />
         <Possibilities />
         <Gallery />
         <Location />
