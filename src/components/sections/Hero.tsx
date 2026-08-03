@@ -5,8 +5,19 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative flex min-h-[100svh] flex-col justify-end overflow-hidden pt-32 pb-16 md:pb-20"
+      className="relative isolate flex min-h-[100svh] flex-col justify-end overflow-hidden pt-32 pb-16 md:pb-20"
     >
+      <div className="absolute inset-0 -z-10 bg-paper">
+        <Image
+          src={hero.image.src}
+          alt={hero.image.alt}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover opacity-15 grayscale"
+        />
+      </div>
+
       <div className="container-edit grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-end lg:gap-8">
         <div className="lg:col-span-7">
           <p className="mb-6 text-sm tracking-tight text-ink-soft">
@@ -45,17 +56,6 @@ export function Hero() {
             </a>
           </div>
         </div>
-      </div>
-
-      <div className="relative mt-16 aspect-[4/3] w-full overflow-hidden sm:aspect-[21/9]">
-        <Image
-          src={hero.image.src}
-          alt={hero.image.alt}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
       </div>
     </section>
   );
