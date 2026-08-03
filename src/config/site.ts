@@ -32,9 +32,7 @@ export const contact = {
     "Olá! Vim pelo site da QUAD SPACE e gostaria de consultar a disponibilidade do estúdio.",
   whatsappMessageQuestion:
     "Olá! Vim pelo site da QUAD SPACE e queria tirar uma dúvida sobre o espaço.",
-  // PLACEHOLDER — link oficial do Google Maps (Google Maps → Compartilhar → Copiar link).
-  // Deixado em branco: preferimos não linkar um local aproximado/errado.
-  mapsUrl: "",
+  mapsUrl: "https://maps.app.goo.gl/GgYZcZ5vV4jNRv2bA",
 };
 
 export function buildWhatsappLink(message: string): string | null {
