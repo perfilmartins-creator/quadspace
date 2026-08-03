@@ -13,20 +13,13 @@ export const hero = {
   },
 };
 
-export const spaceSection = {
-  kicker: "O Espaço",
-  lines: [
-    "30 m² para fotografar, gravar,",
-    "testar e transformar ideias em imagem.",
-  ],
-  body: "Uma estrutura compacta, flexível e pronta para receber ensaios, campanhas, vídeos, conteúdo e workshops — na Av. Conselheiro Aguiar, no Pina.",
-};
-
 export const structure = {
   kicker: "Estrutura",
   title: "Tudo que entra em cena.",
   subtitle:
     "Equipamentos, fundos e espaços de apoio disponíveis para a sua produção.",
+  intro:
+    "Uma estrutura compacta, flexível e pronta para receber ensaios, campanhas, vídeos, conteúdo e workshops — na Av. Conselheiro Aguiar, no Pina.",
 };
 
 export const pricing = {

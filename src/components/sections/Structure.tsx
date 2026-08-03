@@ -16,6 +16,9 @@ export function Structure() {
           <p className="mt-6 max-w-md text-balance leading-relaxed text-ink-soft">
             {structure.subtitle}
           </p>
+          <p className="mt-4 max-w-md text-balance leading-relaxed text-ink-soft">
+            {structure.intro}
+          </p>
         </Reveal>
 
         <div className="mt-16">

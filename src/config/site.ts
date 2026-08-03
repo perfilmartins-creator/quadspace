@@ -117,7 +117,7 @@ export const equipment: EquipmentCategory[] = [
 ];
 
 export const nav = [
-  { label: "O Espaço", href: "#espaco" },
+  { label: "Reserva", href: "#reserva" },
   { label: "Estrutura", href: "#estrutura" },
   { label: "Valores", href: "#valores" },
   { label: "Possibilidades", href: "#possibilidades" },
