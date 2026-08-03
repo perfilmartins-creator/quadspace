@@ -92,28 +92,22 @@ export const equipment: EquipmentCategory[] = [
       { qty: 2, name: "Godox MS300" },
       { qty: 1, name: "Nanlite FS-300B RGB" },
       { qty: 1, name: "Sokani X100 RGB LED" },
-    ],
-  },
-  {
-    number: "02",
-    title: "Modificadores",
-    items: [
       { qty: 2, name: "Tripés de aço inox para iluminação" },
-      { qty: 1, name: "Sombrinha" },
       { qty: 1, name: "Softbox Triopo 90" },
       { qty: 1, name: "Softbox Triopo 120" },
     ],
   },
   {
-    number: "03",
+    number: "02",
     title: "Fundos",
     items: [
       { qty: 1, name: "Fundo branco" },
       { qty: 1, name: "Fundo preto" },
+      { qty: 1, name: "Tecido marrom" },
     ],
   },
   {
-    number: "04",
+    number: "03",
     title: "Apoio e conforto",
     items: [
       { name: "Mesa de apoio para edição" },
