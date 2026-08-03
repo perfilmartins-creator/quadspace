@@ -1,6 +1,11 @@
 import { Reveal } from "@/components/ui/Reveal";
-import { contact } from "@/config/site";
+import { address, contact } from "@/config/site";
 import { location } from "@/lib/content";
+
+const mapQuery = encodeURIComponent(
+  `${address.street} - ${address.neighborhood}, ${address.city} - ${address.state}`
+);
+const mapEmbedSrc = `https://www.google.com/maps?q=${mapQuery}&output=embed`;
 
 export function Location() {
   return (
@@ -36,6 +41,17 @@ export function Location() {
                 Link do Google Maps a confirmar
               </p>
             )}
+
+            <div className="relative mt-10 aspect-[4/3] w-full max-w-md overflow-hidden border border-line sm:aspect-[16/10]">
+              <iframe
+                src={mapEmbedSrc}
+                title="Localização da QUAD SPACE no Google Maps"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="h-full w-full"
+                style={{ border: 0 }}
+              />
+            </div>
           </Reveal>
         </div>
       </div>
