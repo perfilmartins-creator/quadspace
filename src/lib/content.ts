@@ -201,6 +201,7 @@ export const booking = {
   timeLabel: "Horário",
   ctaBooking: "Reservar pelo WhatsApp",
   ctaQuestion: "Tirar dúvidas",
+  paymentTerms: "50% do valor confirma a reserva. O restante é pago no dia.",
 };
 
 export const footer = {

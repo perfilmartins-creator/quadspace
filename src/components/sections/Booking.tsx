@@ -79,6 +79,10 @@ export function Booking() {
               </p>
             </div>
 
+            <p className="mt-4 text-sm text-paper/60">
+              {booking.paymentTerms}
+            </p>
+
             <a
               href={questionHref}
               target={whatsappQuestionHref ? "_blank" : undefined}
