@@ -1,7 +1,7 @@
-// Endereço do servidor multiplayer (definido na Vercel por NEXT_PUBLIC_CREW_SERVER_URL).
-// Sem ele, em produção, o jogo mostra "em breve" em vez de tentar conectar.
+// Endereço do servidor multiplayer. Por padrão o próprio site (rota /api/crew
+// na Vercel); NEXT_PUBLIC_CREW_SERVER_URL aponta para um servidor dedicado.
 
 export const CREW_SERVER_URL = process.env.NEXT_PUBLIC_CREW_SERVER_URL ?? "";
 
-/** O jogo pode conectar? (sempre em desenvolvimento, que usa o servidor local). */
-export const CREW_AVAILABLE = CREW_SERVER_URL !== "" || process.env.NODE_ENV !== "production";
+/** O jogo está disponível (servidor na própria Vercel ou dedicado). */
+export const CREW_AVAILABLE = true;

@@ -34,10 +34,13 @@ const SESSION_MAX_AGE = 10 * 60 * 1000;
 
 export function serverUrl(): string | null {
   if (CREW_SERVER_URL) return CREW_SERVER_URL;
-  if (typeof window !== "undefined" && /^(localhost|127\.0\.0\.1|192\.168\.)/.test(window.location.hostname)) {
+  if (typeof window === "undefined") return null;
+  // Desenvolvimento local: servidor dedicado (npm run crew:server).
+  if (/^(localhost|127\.0\.0\.1|192\.168\.)/.test(window.location.hostname)) {
     return `ws://${window.location.hostname}:3030`;
   }
-  return null;
+  // Produção: rota WebSocket do próprio site na Vercel.
+  return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/crew`;
 }
 
 function loadSession(): Session | null {
@@ -86,6 +89,7 @@ export class CrewClient {
   private noticeSeq = 0;
   private wantConnection = false;
   private lastMessageAt = 0;
+  private quietTimer: ReturnType<typeof setTimeout> | null = null;
   private watchdog: ReturnType<typeof setInterval> | null = null;
 
   /** Diferença relógio do servidor − relógio local (ms). */
@@ -232,8 +236,17 @@ export class CrewClient {
       });
       return;
     }
-    this.update({ status: this.session ? "reconnecting" : "connecting" });
-    const delay = Math.min(4000, 400 * 1.6 ** this.retry);
+    // A Vercel encerra cada conexão periodicamente: a primeira tentativa é imediata
+    // e o aviso de reconexão só aparece se a volta demorar.
+    const delay = this.retry === 1 ? 0 : Math.min(4000, 400 * 1.6 ** this.retry);
+    if (this.retry > 1 || !this.session) {
+      this.update({ status: this.session ? "reconnecting" : "connecting" });
+    } else {
+      if (this.quietTimer) clearTimeout(this.quietTimer);
+      this.quietTimer = setTimeout(() => {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) this.update({ status: "reconnecting" });
+      }, 1500);
+    }
     this.retryTimer = setTimeout(() => this.open(), delay);
   }
 
