@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { game } from "@/lib/content";
+import { CREW_AVAILABLE } from "@/lib/crew/server-url";
 import { readBest, readServerBest, saveBest, subscribeBest } from "./best-score";
 import { FIELD_WIDTH, MAX_FIELD_ASPECT } from "./config";
 import {
@@ -322,9 +323,11 @@ export function QuadBounce() {
                 <Link href="/" className="text-xs text-paper/40 transition-colors hover:text-paper">
                   ← {game.backToSite}
                 </Link>
-                <Link href="/game/crew" className="text-xs text-paper/40 transition-colors hover:text-paper">
-                  QUAD CREW →
-                </Link>
+                {CREW_AVAILABLE && (
+                  <Link href="/game/crew" className="text-xs text-paper/40 transition-colors hover:text-paper">
+                    QUAD CREW →
+                  </Link>
+                )}
               </div>
             </div>
           </div>

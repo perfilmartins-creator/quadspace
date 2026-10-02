@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { NAME_MAX, PASSWORD_MAX, PASSWORD_MIN, normalizeRoomCode, sanitizeName } from "@/lib/crew/constants";
 import { crew } from "@/lib/content";
+import { CREW_AVAILABLE } from "@/lib/crew/server-url";
 import { unlockAudio } from "./feedback";
 import type { CrewClient, Snapshot } from "./net";
 
@@ -56,7 +57,17 @@ export function Home({ client, snapshot, initialCode }: { client: CrewClient; sn
           <span className="text-[clamp(4rem,24vw,6.5rem)] leading-[0.9] font-light tracking-tightest">CREW</span>
         </button>
 
-        {view === "menu" && (
+        {!CREW_AVAILABLE && (
+          <div className="mt-auto flex flex-col items-center gap-4 pt-12 text-center">
+            <p className="text-xs tracking-[0.45em] text-paper/60">EM BREVE</p>
+            <p className="text-sm text-paper/55">{crew.tagline}</p>
+            <Link href="/game" className="pt-4 text-xs text-paper/40 hover:text-paper">
+              ← QUAD BOUNCE
+            </Link>
+          </div>
+        )}
+
+        {CREW_AVAILABLE && view === "menu" && (
           <div className="mt-auto flex flex-col gap-3 pt-12 animate-[crew-rise_0.7s_cubic-bezier(0.16,1,0.3,1)_0.1s_both]">
             <p className="pb-4 text-center text-sm text-paper/55">{crew.tagline}</p>
             <button type="button" onClick={() => setView("join")} className={primary}>
@@ -71,7 +82,7 @@ export function Home({ client, snapshot, initialCode }: { client: CrewClient; sn
           </div>
         )}
 
-        {view !== "menu" && (
+        {CREW_AVAILABLE && view !== "menu" && (
           <RoomForm key={view} client={client} snapshot={snapshot} mode={view} initialCode={initialCode} busy={busy} onBack={() => setView("menu")} />
         )}
       </div>

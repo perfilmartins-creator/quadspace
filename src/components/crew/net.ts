@@ -2,6 +2,7 @@
 // e um store simples para o React (useSyncExternalStore).
 
 import { INTERP_DELAY, NET_RATE } from "@/lib/crew/constants";
+import { CREW_SERVER_URL } from "@/lib/crew/server-url";
 import type { Point, TaskId } from "@/lib/crew/map";
 import {
   ERROR_MESSAGES,
@@ -31,13 +32,12 @@ type Session = { code: string; playerId: string; token: string; savedAt: number 
 const SESSION_KEY = "quad-crew:session";
 const SESSION_MAX_AGE = 10 * 60 * 1000;
 
-export function serverUrl() {
-  const fromEnv = process.env.NEXT_PUBLIC_CREW_SERVER_URL;
-  if (fromEnv) return fromEnv;
+export function serverUrl(): string | null {
+  if (CREW_SERVER_URL) return CREW_SERVER_URL;
   if (typeof window !== "undefined" && /^(localhost|127\.0\.0\.1|192\.168\.)/.test(window.location.hostname)) {
     return `ws://${window.location.hostname}:3030`;
   }
-  return "wss://quad-crew.onrender.com";
+  return null;
 }
 
 function loadSession(): Session | null {
@@ -156,9 +156,15 @@ export class CrewClient {
       this.ws.onclose = null;
       this.ws.close();
     }
+    const url = serverUrl();
+    if (!url) {
+      this.wantConnection = false;
+      this.update({ status: "offline", error: { code: "NETWORK", message: "O servidor do jogo ainda não está no ar." } });
+      return;
+    }
     let ws: WebSocket;
     try {
-      ws = new WebSocket(serverUrl());
+      ws = new WebSocket(url);
     } catch {
       this.scheduleRetry();
       return;
