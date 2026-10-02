@@ -201,3 +201,22 @@ export const footer = {
   tagline: "Um espaço para criar.",
   rights: "Todos os direitos reservados.",
 };
+
+export const game = {
+  title: "QUAD BOUNCE",
+  description:
+    "Minigame da QUAD SPACE: toque para criar plataformas e leve a bola o mais alto que conseguir.",
+  brand: "QUAD",
+  name: "BOUNCE",
+  tagline: "Toque para criar plataformas.\nSuba o mais alto que conseguir.",
+  play: "JOGAR",
+  playAgain: "JOGAR NOVAMENTE",
+  gameOver: "GAME OVER",
+  score: "SCORE",
+  best: "BEST",
+  newBest: "NOVO RECORDE",
+  hint: "Toque na tela para criar uma plataforma",
+  paused: "PAUSADO",
+  resume: "Toque para continuar",
+  backToSite: "quadspace.com.br",
+};

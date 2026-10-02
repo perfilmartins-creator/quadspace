@@ -39,6 +39,7 @@ src/
     layout.tsx          # fontes, metadata/SEO, JSON-LD, viewport
     page.tsx             # composição das seções da home
     privacidade/         # página de política de privacidade
+    game/                # minigame QUAD BOUNCE (/game)
     globals.css          # design tokens (Tailwind v4 @theme)
     sitemap.ts / robots.ts
   config/
@@ -48,6 +49,8 @@ src/
     sections/              # Hero, Space, Structure, Possibilities, Gallery,
                             # Location, FAQ, Booking
     ui/                     # Reveal (animação), Placeholder (imagem placeholder)
+    game/                   # QUAD BOUNCE: engine (física), renderer (canvas),
+                            # config (ajustes de dificuldade), QuadBounce (UI)
   lib/
     content.ts               # todo o copy do site
 ```
