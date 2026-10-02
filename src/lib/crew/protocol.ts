@@ -2,7 +2,7 @@
 // O servidor é autoritativo: o cliente só envia intenções.
 
 import type { Settings } from "./constants";
-import type { DoorId, PanelId, RoomId, TaskId } from "./map";
+import type { DoorId, PanelId, RoomId, TaskId, VentId } from "./map";
 
 export type Phase = "lobby" | "countdown" | "playing" | "meeting" | "ejecting" | "ended";
 export type Role = "crew" | "infiltrator";
@@ -56,6 +56,8 @@ export type EjectState = {
   role?: Role;
   tie: boolean;
   endsAt: number;
+  /** Infiltrados restantes (só quando o host revela papéis). */
+  remaining?: number;
 };
 
 export type EndReason = "tasks" | "votes" | "kills" | "sabotage" | "abandon";
@@ -81,6 +83,8 @@ export type YouState = {
   partners: string[];
   /** Voto já registrado nesta reunião. */
   vote: VoteTarget | null;
+  /** Duto em que o infiltrado está escondido. */
+  vent: VentId | null;
 };
 
 export type RoomState = {
@@ -139,6 +143,8 @@ export type ClientMessage =
   | { type: "fixLights" }
   | { type: "panel"; panelId: PanelId }
   | { type: "backToLobby" }
+  | { type: "vent"; action: "enter" | "exit" }
+  | { type: "ventMove"; ventId: VentId }
   | { type: "ping"; c: number };
 
 // ---------- Servidor → cliente ----------

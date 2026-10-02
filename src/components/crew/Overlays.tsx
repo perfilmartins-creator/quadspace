@@ -161,6 +161,12 @@ function Eject({ snapshot }: { snapshot: Snapshot }) {
     else if (e.role === "crew") line2 = `${e.name} não era o infiltrado.`;
     else line2 = `O papel de ${e.name} não foi revelado.`;
   }
+  const line3 =
+    e.remaining === undefined
+      ? null
+      : e.remaining === 0
+        ? null
+        : `${e.remaining} ${e.remaining === 1 ? "infiltrado restante" : "infiltrados restantes"}.`;
   return (
     <div className="absolute inset-0 z-40 flex flex-col items-center justify-center overflow-hidden bg-[#030303] px-6 text-center">
       {/* Feixe de luz de estúdio */}
@@ -177,6 +183,7 @@ function Eject({ snapshot }: { snapshot: Snapshot }) {
       >
         {line2}
       </p>
+      {line3 && <p className="relative mt-4 text-sm tracking-[0.15em] text-paper/50 animate-[crew-rise_0.6s_ease-out_2.4s_both]">{line3}</p>}
     </div>
   );
 }

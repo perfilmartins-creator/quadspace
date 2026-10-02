@@ -1,7 +1,7 @@
 // Teste de ponta a ponta do servidor do QUAD CREW com vários clientes reais.
 // Uso: CREW_URL=ws://localhost:3031 npx tsx server/crew/smoke-test.ts
 
-import { CRITICAL_PANELS, EMERGENCY_POS, LIGHTS_PANEL, taskById } from "../../src/lib/crew/map";
+import { CRITICAL_PANELS, EMERGENCY_POS, LIGHTS_PANEL, VENTS, taskById } from "../../src/lib/crew/map";
 import { Bot, sleep } from "./test-bot";
 
 const PASSWORD = "QUAD123";
@@ -399,6 +399,39 @@ async function testRaces() {
   for (const x of [host, a, b, c]) x.close();
 }
 
+async function testVents() {
+  console.log("\n# Dutos do infiltrado");
+  const all = await makeRoom(["V1", "V2", "V3", "V4"]);
+  await startGame(all);
+  const imp = all.find((b) => b.you.role === "infiltrator")!;
+  const crew = all.find((b) => b.you.role === "crew")!;
+  const vent = VENTS[1]; // lounge, perto do spawn
+  crew.send({ type: "vent", action: "enter" });
+  await sleep(200);
+  check(crew.you.vent === null, "CREW não entra em duto");
+  imp.send({ type: "vent", action: "enter" });
+  await sleep(200);
+  check(imp.you.vent === null, "não entra em duto longe dele");
+  await imp.walkTo(vent.pos);
+  imp.send({ type: "vent", action: "enter" });
+  await until(() => imp.you.vent === vent.id, "entrou no duto");
+  await sleep(200);
+  check(!crew.snapIds.has(imp.playerId), "infiltrado no duto some para os outros");
+  imp.send({ type: "move", x: imp.pos.x + 20, y: imp.pos.y });
+  await sleep(150);
+  check(imp.you.vent === vent.id, "parado enquanto está no duto");
+  imp.send({ type: "ventMove", ventId: "v-recepcao" });
+  await sleep(200);
+  check(imp.you.vent === vent.id, "não vai para duto não ligado");
+  imp.send({ type: "ventMove", ventId: "v-equip" });
+  await until(() => imp.you.vent === "v-equip", "andou pelo duto");
+  imp.send({ type: "vent", action: "exit" });
+  await until(() => imp.you.vent === null, "saiu do duto");
+  await sleep(200);
+  check(crew.snapIds.has(imp.playerId), "visível de novo ao sair");
+  for (const x of all) x.close();
+}
+
 async function main() {
   const t0 = Date.now();
   await testJoinValidation();
@@ -407,6 +440,7 @@ async function main() {
   await testFullGameAndPrivacy();
   await testTasksWin();
   await testReconnectAndHost();
+  await testVents();
   await testSabotage();
   await testCriticalTimeout();
   console.log(`\n${failures === 0 ? "TUDO OK" : `${failures} FALHA(S)`} em ${((Date.now() - t0) / 1000).toFixed(0)}s`);

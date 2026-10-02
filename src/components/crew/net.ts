@@ -99,6 +99,11 @@ export class CrewClient {
   tracks = new Map<string, Track>();
   /** Posição local (predição). */
   local: Point = { x: 0, y: 0 };
+  /** Deslocamento visual que some aos poucos após uma correção do servidor. */
+  renderOffset: Point = { x: 0, y: 0 };
+  /** Estimativa (servidor − local) a partir dos pacotes mais rápidos recentes. */
+  private snapOffsets: { at: number; value: number }[] = [];
+  private snapOffset: number | null = null;
   localReady = false;
   kills: KillFx[] = [];
   private lastSent = { x: 0, y: 0, at: 0 };
@@ -332,11 +337,20 @@ export class CrewClient {
       case "snap":
         this.ingestSnap(msg.t, msg.p);
         break;
-      case "correct":
+      case "correct": {
+        // Correções pequenas: o personagem desliza até a posição certa.
+        const dx = this.local.x - msg.x;
+        const dy = this.local.y - msg.y;
+        if (this.localReady && Math.hypot(dx, dy) < 80) {
+          this.renderOffset = { x: this.renderOffset.x + dx, y: this.renderOffset.y + dy };
+        } else {
+          this.renderOffset = { x: 0, y: 0 };
+        }
         this.local = { x: msg.x, y: msg.y };
         this.localReady = true;
         this.lastSent = { x: msg.x, y: msg.y, at: Date.now() };
         break;
+      }
       case "chat":
         if (!this.snapshot.chat.some((m) => m.id === msg.message.id)) {
           this.update({ chat: [...this.snapshot.chat.slice(-60), msg.message] });
@@ -379,6 +393,12 @@ export class CrewClient {
   }
 
   private ingestSnap(t: number, entries: [string, number, number, 0 | 1][]) {
+    // O pacote mais rápido dos últimos 3 s define o relógio da interpolação:
+    // atrasos ocasionais da rede não fazem os personagens "pularem".
+    const arrival = Date.now();
+    this.snapOffsets.push({ at: arrival, value: t - arrival });
+    this.snapOffsets = this.snapOffsets.filter((o) => arrival - o.at < 3000);
+    this.snapOffset = Math.max(...this.snapOffsets.map((o) => o.value));
     const seen = new Set<string>();
     const me = this.session?.playerId;
     for (const [id, x, y, ghost] of entries) {
@@ -406,7 +426,7 @@ export class CrewClient {
   remotePosition(id: string): (Point & { moving: boolean }) | null {
     const track = this.tracks.get(id);
     if (!track || track.samples.length === 0) return null;
-    const t = this.serverNow() - INTERP_DELAY;
+    const t = (this.snapOffset !== null ? Date.now() + this.snapOffset : this.serverNow()) - INTERP_DELAY;
     const s = track.samples;
     let x = s[s.length - 1].x;
     let y = s[s.length - 1].y;

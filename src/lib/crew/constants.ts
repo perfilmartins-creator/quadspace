@@ -23,6 +23,7 @@ export const PLAYER_HALF = 14;
 export const KILL_RANGE = 90;
 export const REPORT_RANGE = 120;
 export const USE_RANGE = 80;
+export const VENT_RANGE = 70;
 export const EMERGENCY_RANGE = 120;
 
 export const VISION_CREW = 330;
@@ -30,9 +31,9 @@ export const VISION_INFILTRATOR = 420;
 export const VISION_BLACKOUT = 120;
 
 /** Frequência de envio de posição / snapshots (Hz). */
-export const NET_RATE = 15;
+export const NET_RATE = 20;
 /** Atraso de interpolação dos jogadores remotos (ms). */
-export const INTERP_DELAY = 110;
+export const INTERP_DELAY = 100;
 
 export const COUNTDOWN_MS = 3000;
 export const ROLE_REVEAL_MS = 3500;

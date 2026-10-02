@@ -13,6 +13,7 @@ import {
   EMERGENCY_RANGE,
   KILL_COOLDOWN_START_MS,
   KILL_RANGE,
+  VENT_RANGE,
   MEETING_INTRO_MS,
   MIN_PLAYERS,
   PANEL_HOLD_MS,
@@ -40,8 +41,11 @@ import {
   doorsOfRoom,
   roomAt,
   spawnPoint,
+  VENTS,
   taskById,
+  ventById,
   type PanelId,
+  type VentId,
   type Point,
   type TaskId,
 } from "../../src/lib/crew/map";
@@ -89,6 +93,7 @@ export type Player = {
   sabotageReadyAt: number;
   vote: VoteTarget | null;
   chatTimes: number[];
+  vent: VentId | null;
 };
 
 const ENDED_AUTO_LOBBY_MS = 90_000;
@@ -103,6 +108,10 @@ function shuffle<T>(items: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+function VENTS_NEAR(p: { x: number; y: number }) {
+  return VENTS.find((v) => distance(p, v.pos) <= VENT_RANGE);
 }
 
 export function newId(bytes = 9) {
@@ -193,6 +202,7 @@ export class Room {
       sabotageReadyAt: 0,
       vote: null,
       chatTimes: [],
+      vent: null,
     };
     this.players.set(player.id, player);
     if (!this.hostId || !this.players.has(this.hostId)) this.hostId = player.id;
@@ -361,6 +371,7 @@ export class Room {
             ? this.playerList.filter((p) => p.role === "infiltrator" && p.id !== viewer.id).map((p) => p.id)
             : [],
         vote: viewer.vote,
+        vent: viewer.vent,
       },
     };
   }
@@ -374,6 +385,8 @@ export class Room {
       for (const q of list) {
         const ghost = this.phase !== "lobby" && this.phase !== "ended" && !q.alive;
         if (ghost && viewer.alive && this.inGame()) continue;
+        // Escondido no duto: some para todo mundo (menos para si mesmo).
+        if (q.vent && q.id !== viewer.id) continue;
         p.push([q.id, Math.round(q.x), Math.round(q.y), ghost ? 1 : 0]);
       }
       this.sendTo(viewer, { type: "snap", t: now, p });
@@ -486,6 +499,7 @@ export class Room {
       p.killReadyAt = firstTurn + KILL_COOLDOWN_START_MS;
       p.sabotageReadyAt = firstTurn + KILL_COOLDOWN_START_MS;
       p.vote = null;
+      p.vent = null;
     });
     this.placeAtSpawn();
 
@@ -530,6 +544,7 @@ export class Room {
       p.roleRevealed = false;
       p.tasks = [];
       p.vote = null;
+      p.vent = null;
     }
     this.placeAtSpawn();
     this.markDirty();
@@ -549,9 +564,11 @@ export class Room {
     const now = Date.now();
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     if (!(this.phase === "lobby" || this.phase === "ended" || this.canAct(now))) return;
+    if (player.vent) return;
 
-    const elapsed = Math.min(500, Math.max(16, now - player.lastMoveAt));
-    const maxDist = BASE_SPEED * this.settings.speed * (elapsed / 1000) * 1.35 + 20;
+    // Tolerante a rajadas de pacotes (rede móvel), mas sem permitir teletransporte.
+    const elapsed = Math.min(500, Math.max(33, now - player.lastMoveAt));
+    const maxDist = BASE_SPEED * this.settings.speed * (elapsed / 1000) * 1.5 + 30;
     let dx = x - player.x;
     let dy = y - player.y;
     const dist = Math.hypot(dx, dy);
@@ -571,7 +588,7 @@ export class Room {
       const solids = solidsWith(this.closedDoors());
       const target = { x: player.x + dx, y: player.y + dy };
       const slid = moveWithCollision(player, dx, dy, solids);
-      if (!clamped && !collides(target.x, target.y, solids) && distance(slid, target) < 16) {
+      if (!clamped && !collides(target.x, target.y, solids) && distance(slid, target) < 24) {
         player.x = target.x;
         player.y = target.y;
       } else {
@@ -595,7 +612,7 @@ export class Room {
     const now = Date.now();
     const target = this.players.get(targetId);
     if (!this.canAct(now) || !target) return;
-    if (killer.role !== "infiltrator" || !killer.alive) return;
+    if (killer.role !== "infiltrator" || !killer.alive || killer.vent) return;
     if (!target.alive || target.role !== "crew") return;
     if (now < killer.killReadyAt) return;
     if (distance(killer, target) > KILL_RANGE) return;
@@ -604,6 +621,11 @@ export class Room {
     target.vote = null;
     killer.killReadyAt = now + this.settings.killCooldown * 1000;
     this.bodies.push({ id: target.id, x: Math.round(target.x), y: Math.round(target.y), color: target.color });
+    // O infiltrado vai até o corpo, como num bote.
+    killer.x = target.x;
+    killer.y = target.y;
+    killer.lastMoveAt = now;
+    this.sendTo(killer, { type: "correct", x: killer.x, y: killer.y });
 
     // Só fica sabendo da morte quem viu, a vítima, fantasmas e infiltrados.
     const segments = visionSegments(this.closedDoors());
@@ -642,6 +664,7 @@ export class Room {
     for (const p of this.players.values()) {
       if (!p.alive) p.deathKnown = true;
       p.vote = null;
+      p.vent = null;
       p.taskStarts.clear();
     }
     this.bodies = [];
@@ -741,6 +764,9 @@ export class Room {
       role: ejected && this.settings.revealRoleOnEject ? (ejected.role ?? undefined) : undefined,
       tie,
       endsAt: now + EJECT_MS,
+      remaining: this.settings.revealRoleOnEject
+        ? this.playerList.filter((p) => p.role === "infiltrator" && p.alive).length
+        : undefined,
     };
     this.markDirty();
   }
@@ -831,6 +857,40 @@ export class Room {
     if (!panel || distance(player, panel.pos) > USE_RANGE + 30) return;
     this.panelUntil[panelId] = now + PANEL_HOLD_MS;
     this.tickSabotage(now);
+  }
+
+  // ---------- Dutos (infiltrado) ----------
+
+  vent(player: Player, action: "enter" | "exit") {
+    const now = Date.now();
+    if (!this.canAct(now) || player.role !== "infiltrator" || !player.alive) return;
+    if (action === "enter") {
+      if (player.vent) return;
+      const vent = VENTS_NEAR(player);
+      if (!vent) return;
+      player.vent = vent.id;
+      player.x = vent.pos.x;
+      player.y = vent.pos.y;
+    } else {
+      if (!player.vent) return;
+      player.vent = null;
+    }
+    player.lastMoveAt = now;
+    this.sendTo(player, { type: "correct", x: player.x, y: player.y });
+    this.markDirty();
+  }
+
+  ventMove(player: Player, ventId: VentId) {
+    if (!this.canAct(Date.now()) || !player.vent) return;
+    const current = ventById(player.vent);
+    const next = ventById(ventId);
+    if (!current || !next || !current.links.includes(next.id)) return;
+    player.vent = next.id;
+    player.x = next.pos.x;
+    player.y = next.pos.y;
+    player.lastMoveAt = Date.now();
+    this.sendTo(player, { type: "correct", x: player.x, y: player.y });
+    this.markDirty();
   }
 
   // ---------- Chat ----------

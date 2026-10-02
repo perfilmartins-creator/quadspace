@@ -10,15 +10,16 @@ import {
   VISION_BLACKOUT,
   VISION_CREW,
   VISION_INFILTRATOR,
+  VENT_RANGE,
   colorHex,
 } from "@/lib/crew/constants";
-import { CRITICAL_PANELS, EMERGENCY_POS, LIGHTS_PANEL, TASKS, distance, type Point, type TaskId } from "@/lib/crew/map";
+import { CRITICAL_PANELS, EMERGENCY_POS, LIGHTS_PANEL, MAP_HEIGHT, MAP_WIDTH, TASKS, VENTS, distance, type Point, type TaskId, type VentId } from "@/lib/crew/map";
 import { canSee, moveGhost, moveWithCollision, solidsWith, visibilityPolygon, visionSegments } from "@/lib/crew/physics";
 import type { RoomState } from "@/lib/crew/protocol";
 import { sfx, unlockAudio, vibrate } from "./feedback";
 import { Hud } from "./Hud";
 import type { CrewClient, Snapshot } from "./net";
-import { drawBody, drawCeiling, drawCharacter, drawFog, drawKillFx, drawMap } from "./render";
+import { buildMapCache, drawBody, drawCeiling, drawCharacter, drawFog, drawKillFx, drawMapDynamic } from "./render";
 import { TaskModal, type OpenTask } from "./Tasks";
 
 export type UseTarget =
@@ -27,13 +28,17 @@ export type UseTarget =
   | { kind: "lights" }
   | { kind: "panel"; panelId: "servidor" | "roteador" };
 
-export type Near = { use: UseTarget | null; killId: string | null; bodyId: string | null };
+export type Near = { use: UseTarget | null; killId: string | null; bodyId: string | null; ventId: VentId | null };
 
-const EMPTY_NEAR: Near = { use: null, killId: null, bodyId: null };
+const EMPTY_NEAR: Near = { use: null, killId: null, bodyId: null, ventId: null };
+
+/** A névoa é um degradê suave: dá para desenhar em meia resolução. */
+const FOG_RESOLUTION = 0.5;
 
 function sameNear(a: Near, b: Near) {
   return (
     a.killId === b.killId &&
+    a.ventId === b.ventId &&
     a.bodyId === b.bodyId &&
     JSON.stringify(a.use) === JSON.stringify(b.use)
   );
@@ -43,7 +48,7 @@ export type Input = { joy: Point; keys: Set<string> };
 
 export function canMove(state: RoomState, now: number) {
   if (state.phase === "lobby" || state.phase === "ended") return true;
-  return state.phase === "playing" && now >= state.frozenUntil;
+  return state.phase === "playing" && now >= state.frozenUntil && !state.you.vent;
 }
 
 type Props = { client: CrewClient; snapshot: Snapshot };
@@ -70,7 +75,15 @@ export function GameScreen({ client, snapshot }: Props) {
 
     const font = getComputedStyle(document.body).fontFamily;
     const brand = new Image();
+    let mapCache: HTMLCanvasElement | null = null;
+    let mapCacheKey = "";
+    const invalidateMap = () => {
+      mapCache = null;
+      mapCacheKey = "";
+    };
+    brand.onload = invalidateMap;
     brand.src = "/brand/estrelas-branco.png";
+    void document.fonts?.ready.then(invalidateMap);
 
     let raf = 0;
     let last = performance.now();
@@ -88,11 +101,12 @@ export function GameScreen({ client, snapshot }: Props) {
       const rect = canvas.getBoundingClientRect();
       width = Math.max(1, rect.width);
       height = Math.max(1, rect.height);
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      for (const c of [canvas, fogCanvas]) {
-        c.width = Math.round(width * dpr);
-        c.height = Math.round(height * dpr);
-      }
+      // 1.5x basta para um jogo em movimento e reduz muito o custo por quadro.
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      fogCanvas.width = Math.round(width * dpr * FOG_RESOLUTION);
+      fogCanvas.height = Math.round(height * dpr * FOG_RESOLUTION);
     };
     resize();
     const observer = new ResizeObserver(resize);
@@ -143,6 +157,14 @@ export function GameScreen({ client, snapshot }: Props) {
       }
       const me = client.local;
 
+      // Posições interpoladas dos outros jogadores (uma vez por quadro).
+      const remote = new Map<string, Point & { moving: boolean }>();
+      for (const p of state.players) {
+        if (p.id === you.id) continue;
+        const pos = client.remotePosition(p.id);
+        if (pos) remote.set(p.id, pos);
+      }
+
       // Interações próximas ----------------------------------------
       let use: UseTarget | null = null;
       let killId: string | null = null;
@@ -179,7 +201,7 @@ export function GameScreen({ client, snapshot }: Props) {
             let bestKill = KILL_RANGE - 8;
             for (const p of state.players) {
               if (p.id === you.id || !p.alive || you.partners.includes(p.id)) continue;
-              const pos = client.remotePosition(p.id);
+              const pos = remote.get(p.id);
               if (!pos || client.tracks.get(p.id)?.ghost) continue;
               const d = distance(me, pos);
               if (d < bestKill) {
@@ -190,7 +212,11 @@ export function GameScreen({ client, snapshot }: Props) {
           }
         }
       }
-      const nextNear: Near = { use, killId, bodyId };
+      let ventId: VentId | null = null;
+      if (state.phase === "playing" && serverNow >= state.frozenUntil && you.alive && you.role === "infiltrator" && !you.vent) {
+        for (const v of VENTS) if (distance(me, v.pos) < VENT_RANGE - 6) ventId = v.id;
+      }
+      const nextNear: Near = { use, killId, bodyId, ventId };
       if (!sameNear(nextNear, lastNear)) {
         lastNear = nextNear;
         setNear(nextNear);
@@ -206,9 +232,14 @@ export function GameScreen({ client, snapshot }: Props) {
       seenKills = client.kills.length;
 
       // Câmera -------------------------------------------------------
-      const zoom = Math.min(1.6, Math.max(0.55, Math.min(width, height) / 600));
-      const camX = me.x;
-      const camY = me.y - 20;
+      const zoom = Math.min(1.9, Math.max(0.7, Math.min(width, height) / 470));
+      // Correções do servidor são suavizadas visualmente (sem "tranco").
+      const off = client.renderOffset;
+      off.x *= Math.exp(-dt * 12);
+      off.y *= Math.exp(-dt * 12);
+      const view = { x: me.x + off.x, y: me.y + off.y };
+      const camX = view.x;
+      const camY = view.y - 20;
       const toScreen = (p: Point) => ({
         x: (p.x - camX) * zoom * dpr + (width * dpr) / 2,
         y: (p.y - camY) * zoom * dpr + (height * dpr) / 2,
@@ -216,7 +247,19 @@ export function GameScreen({ client, snapshot }: Props) {
       ctx.setTransform(zoom * dpr, 0, 0, zoom * dpr, (width * dpr) / 2 - camX * zoom * dpr, (height * dpr) / 2 - camY * zoom * dpr);
 
       const pending = new Set<TaskId>(state.phase === "playing" ? you.tasks.filter((t) => !t.done).map((t) => t.id) : []);
-      drawMap(ctx, {
+      const cacheScale = Math.min(1.5, Math.max(1, zoom * dpr));
+      const key = `${state.sabotage.lights}-${cacheScale.toFixed(2)}`;
+      if (!mapCache || key !== mapCacheKey) {
+        mapCache = buildMapCache(cacheScale, { lights: state.sabotage.lights, font, brand });
+        mapCacheKey = key;
+      }
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "#050505";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+      ctx.drawImage(mapCache, 0, 0, MAP_WIDTH, MAP_HEIGHT);
+      drawMapDynamic(ctx, {
         time: nowPerf,
         closedDoors,
         lights: state.sabotage.lights,
@@ -249,10 +292,12 @@ export function GameScreen({ client, snapshot }: Props) {
       for (const p of state.players) {
         const isMe = p.id === you.id;
         if (isMe) {
-          drawn.push({ id: p.id, x: me.x, y: me.y, color: p.color, name: p.name, ghost, local: true, moving, facing, walk, red: you.role === "infiltrator" });
+          if (!you.vent) {
+            drawn.push({ id: p.id, x: view.x, y: view.y, color: p.color, name: p.name, ghost, local: true, moving, facing, walk, red: you.role === "infiltrator" });
+          }
           continue;
         }
-        const pos = client.remotePosition(p.id);
+        const pos = remote.get(p.id);
         if (!pos) continue;
         const remoteGhost = client.tracks.get(p.id)?.ghost ?? false;
         if (remoteGhost && !ghost) continue;
@@ -308,13 +353,53 @@ export function GameScreen({ client, snapshot }: Props) {
       }
 
       // Névoa (campo de visão limitado)
+      const fw = fogCanvas.width;
+      const fh = fogCanvas.height;
       if (inGame && !ghost) {
-        fog.setTransform(1, 0, 0, 1, 0, 0);
-        const poly = visibilityPolygon(me, radius, segments, 140);
-        drawFog(fog, width * dpr, height * dpr, poly, me, radius, toScreen, zoom * dpr, state.sabotage.lights ? 0.96 : 0.9);
-        fogCanvas.style.opacity = "1";
+        const poly = visibilityPolygon(view, radius, segments, 120);
+        drawFog(fog, fw, fh, poly, view, radius, toScreen, zoom * dpr, state.sabotage.lights ? 0.96 : 0.9, FOG_RESOLUTION);
       } else {
-        fogCanvas.style.opacity = "0";
+        fog.setTransform(1, 0, 0, 1, 0, 0);
+        fog.clearRect(0, 0, fw, fh);
+      }
+
+      // Setas na borda da tela apontando para tarefas e sabotagens.
+      if (state.phase === "playing") {
+        const targets: { p: Point; color: string }[] = [];
+        for (const t of you.tasks) {
+          if (t.done) continue;
+          const station = TASKS.find((x) => x.id === t.id);
+          if (station) targets.push({ p: station.pos, color: "#ffd23d" });
+        }
+        if (you.alive && state.sabotage.lights) targets.push({ p: LIGHTS_PANEL, color: "#ff4d3d" });
+        if (you.alive && state.sabotage.critical) for (const cp of CRITICAL_PANELS) targets.push({ p: cp.pos, color: "#ff4d3d" });
+        const cx = fw / 2;
+        const cy = fh / 2;
+        const margin = 26 * dpr * FOG_RESOLUTION;
+        for (const target of targets) {
+          const sp = toScreen(target.p);
+          const x = sp.x * FOG_RESOLUTION;
+          const y = sp.y * FOG_RESOLUTION;
+          if (x > margin && x < fw - margin && y > margin && y < fh - margin) continue;
+          const angle = Math.atan2(y - cy, x - cx);
+          const kx = (fw / 2 - margin) / Math.max(0.001, Math.abs(Math.cos(angle)));
+          const ky = (fh / 2 - margin) / Math.max(0.001, Math.abs(Math.sin(angle)));
+          const r = Math.min(kx, ky);
+          const ax = cx + Math.cos(angle) * r;
+          const ay = cy + Math.sin(angle) * r;
+          const size = 9 * dpr * FOG_RESOLUTION;
+          fog.save();
+          fog.translate(ax, ay);
+          fog.rotate(angle);
+          fog.fillStyle = target.color;
+          fog.beginPath();
+          fog.moveTo(size, 0);
+          fog.lineTo(-size * 0.8, -size * 0.75);
+          fog.lineTo(-size * 0.8, size * 0.75);
+          fog.closePath();
+          fog.fill();
+          fog.restore();
+        }
       }
     };
     raf = requestAnimationFrame(frame);

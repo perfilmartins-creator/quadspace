@@ -11,6 +11,8 @@ import { Meeting } from "./Meeting";
 import type { CrewClient, Snapshot } from "./net";
 import { Overlays } from "./Overlays";
 import { GhostChat } from "./Chat";
+import { MapOverlay } from "./MapOverlay";
+import { ROOMS as ROOM_LIST, VENTS, roomAt } from "@/lib/crew/map";
 
 type Props = {
   client: CrewClient;
@@ -31,6 +33,7 @@ export function Hud({ client, snapshot, near, onJoystick, onUse, taskOpen }: Pro
   const playing = state.phase === "playing";
   const inGame = state.phase !== "lobby" && state.phase !== "ended";
   const sound = useSyncExternalStore(subscribeSound, soundEnabled, serverSoundEnabled);
+  const [mapOpen, setMapOpen] = useState(false);
 
   return (
     <>
@@ -49,10 +52,19 @@ export function Hud({ client, snapshot, near, onJoystick, onUse, taskOpen }: Pro
             type="button"
             onClick={() => setSoundEnabled(!sound)}
             aria-label={sound ? "Desligar som" : "Ligar som"}
-            className="border border-paper/15 bg-ink/60 px-2.5 py-1.5 text-[11px] tracking-[0.15em] text-paper/70 backdrop-blur"
+            className="border border-paper/15 bg-ink/60 px-2 py-1.5 text-[10px] tracking-[0.12em] text-paper/70 backdrop-blur"
           >
-            SOM {sound ? "ON" : "OFF"}
+            {sound ? "SOM" : "MUDO"}
           </button>
+          {inGame && (
+            <button
+              type="button"
+              onClick={() => setMapOpen(true)}
+              className="border border-paper/15 bg-ink/60 px-2 py-1.5 text-[10px] tracking-[0.12em] text-paper/70 backdrop-blur"
+            >
+              MAPA
+            </button>
+          )}
           <LeaveButton client={client} inGame={inGame} />
         </div>
       </div>
@@ -76,6 +88,8 @@ export function Hud({ client, snapshot, near, onJoystick, onUse, taskOpen }: Pro
       {state.phase === "lobby" && <LobbyPanel client={client} snapshot={snapshot} />}
 
       {state.phase === "meeting" && <Meeting client={client} snapshot={snapshot} now={now} />}
+
+      {mapOpen && inGame && state.phase !== "meeting" && <MapOverlay client={client} state={state} onClose={() => setMapOpen(false)} />}
 
       <Overlays client={client} snapshot={snapshot} now={now} />
     </>
@@ -112,11 +126,11 @@ function LeaveButton({ client, inGame }: { client: CrewClient; inGame: boolean }
         <button
           type="button"
           onClick={() => client.leave()}
-          className="border border-[#ff4d3d] bg-[#ff4d3d] px-2.5 py-1.5 text-[11px] tracking-[0.15em] text-ink"
+          className="border border-[#ff4d3d] bg-[#ff4d3d] px-2 py-1.5 text-[10px] tracking-[0.12em] text-ink"
         >
           SAIR
         </button>
-        <button type="button" onClick={() => setConfirm(false)} className="border border-paper/15 bg-ink/60 px-2.5 py-1.5 text-[11px] tracking-[0.15em]">
+        <button type="button" onClick={() => setConfirm(false)} className="border border-paper/15 bg-ink/60 px-2 py-1.5 text-[10px] tracking-[0.12em]">
           FICAR
         </button>
       </div>
@@ -127,7 +141,7 @@ function LeaveButton({ client, inGame }: { client: CrewClient; inGame: boolean }
       type="button"
       onClick={() => (inGame ? setConfirm(true) : client.leave())}
       aria-label="Sair da sala"
-      className="border border-paper/15 bg-ink/60 px-2.5 py-1.5 text-[11px] tracking-[0.15em] text-paper/70 backdrop-blur"
+      className="border border-paper/15 bg-ink/60 px-2 py-1.5 text-[10px] tracking-[0.12em] text-paper/70 backdrop-blur"
     >
       SAIR
     </button>
@@ -141,7 +155,7 @@ function TaskPanel({ snapshot }: { snapshot: Snapshot }) {
   const infiltrator = state.you.role === "infiltrator";
   const pct = total > 0 ? (done / total) * 100 : 0;
   return (
-    <div className="w-[min(15rem,52vw)] border border-paper/15 bg-ink/70 backdrop-blur">
+    <div className="w-[min(15rem,44vw)] border border-paper/15 bg-ink/70 backdrop-blur">
       <button type="button" onClick={() => setOpen((v) => !v)} className="block w-full px-3 pt-2 pb-2 text-left">
         <span className="flex items-center justify-between text-[10px] tracking-[0.3em] text-paper/60">
           TAREFAS <span>{Math.round(pct)}%</span>
@@ -281,7 +295,48 @@ function ActionButtons({ client, snapshot, near, now, onUse }: { client: CrewCli
           ))}
         </div>
       )}
+      {infiltrator && you.vent && (
+        <div className="mb-1 w-56 border border-[#9b6bff]/60 bg-ink/90 backdrop-blur">
+          <p className="border-b border-paper/10 px-4 py-2 text-[10px] tracking-[0.3em] text-[#c9b0ff]">NO DUTO · IR PARA</p>
+          {VENTS.find((v) => v.id === you.vent)?.links.map((id) => {
+            const target = VENTS.find((v) => v.id === id)!;
+            const room = roomAt(target.pos) ?? ROOM_LIST[0];
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  client.send({ type: "ventMove", ventId: id });
+                  vibrate(10);
+                }}
+                className="block w-full border-b border-paper/10 px-4 py-3 text-left text-xs tracking-[0.2em]"
+              >
+                → {room.name}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => client.send({ type: "vent", action: "exit" })}
+            className="block w-full bg-[#9b6bff] px-4 py-3 text-left text-xs tracking-[0.25em] text-ink"
+          >
+            SAIR DO DUTO
+          </button>
+        </div>
+      )}
       <div className="flex items-end gap-3">
+        {infiltrator && near.ventId && !you.vent && (
+          <button
+            type="button"
+            onClick={() => {
+              client.send({ type: "vent", action: "enter" });
+              vibrate(15);
+            }}
+            className={`${actionButton} h-16 w-16 self-end border-[#9b6bff] bg-[#9b6bff]/25 text-[#d9c7ff]`}
+          >
+            DUTO
+          </button>
+        )}
         {infiltrator && (
           <div className="flex flex-col gap-3">
             <button

@@ -197,3 +197,20 @@ export function distance(a: Point, b: Point) {
 export function doorsOfRoom(room: RoomId): DoorId[] {
   return DOORS.filter((d) => d.rooms.includes(room)).map((d) => d.id);
 }
+
+export type VentId = "v-estudio" | "v-lounge" | "v-equip" | "v-edicao" | "v-corredor" | "v-recepcao";
+export type Vent = { id: VentId; pos: Point; links: VentId[] };
+
+/** Dutos de cabo no piso: só o infiltrado usa para se esconder e trocar de sala. */
+export const VENTS: Vent[] = [
+  { id: "v-estudio", pos: { x: 150, y: 420 }, links: ["v-lounge", "v-equip"] },
+  { id: "v-lounge", pos: { x: 560, y: 980 }, links: ["v-estudio", "v-equip"] },
+  { id: "v-equip", pos: { x: 720, y: 1110 }, links: ["v-estudio", "v-lounge"] },
+  { id: "v-edicao", pos: { x: 1550, y: 440 }, links: ["v-corredor", "v-recepcao"] },
+  { id: "v-corredor", pos: { x: 1000, y: 700 }, links: ["v-edicao", "v-recepcao"] },
+  { id: "v-recepcao", pos: { x: 1300, y: 1220 }, links: ["v-edicao", "v-corredor"] },
+];
+
+export function ventById(id: string) {
+  return VENTS.find((v) => v.id === id);
+}

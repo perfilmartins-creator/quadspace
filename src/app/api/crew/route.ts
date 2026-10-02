@@ -7,6 +7,8 @@ import { handleConnection } from "../../../../server/crew/hub";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+// São Paulo: menor latência para quem joga no Recife/Brasil.
+export const preferredRegion = "gru1";
 
 export async function GET(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "";

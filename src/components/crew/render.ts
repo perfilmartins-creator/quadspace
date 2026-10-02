@@ -10,6 +10,7 @@ import {
   MAP_WIDTH,
   ROOMS,
   TASKS,
+  VENTS,
   WALLS,
   type DoorId,
   type Point,
@@ -103,7 +104,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     }
     ctx.closePath();
   } else {
-    roundRect(ctx, x - 15, top, 30, 36, 12);
+    roundRect(ctx, x - 16, top - 1, 32, 37, 15);
   }
   ctx.fill();
 
@@ -467,15 +468,14 @@ function drawFurniture(ctx: CanvasRenderingContext2D, s: MapScene) {
         ctx.fill();
         ctx.fillStyle = "rgba(0,0,0,0.12)";
         ctx.fillRect(x, y + h - 6, w, 6);
-        // botão de reunião
-        const pulse = s.showEmergency ? 0.5 + 0.5 * Math.sin(s.time * 0.005) : 0;
+        // botão de reunião (o pulso é desenhado na camada dinâmica)
         ctx.fillStyle = "#2a2a2a";
         ctx.beginPath();
         ctx.arc(EMERGENCY_POS.x, EMERGENCY_POS.y, 20, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = ACCENT_RED;
         ctx.beginPath();
-        ctx.arc(EMERGENCY_POS.x, EMERGENCY_POS.y, 13 + pulse * 2, 0, Math.PI * 2);
+        ctx.arc(EMERGENCY_POS.x, EMERGENCY_POS.y, 13, 0, Math.PI * 2);
         ctx.fill();
         break;
       }
@@ -584,7 +584,7 @@ function drawFurniture(ctx: CanvasRenderingContext2D, s: MapScene) {
   }
 }
 
-function drawWalls(ctx: CanvasRenderingContext2D, s: MapScene) {
+function drawWalls(ctx: CanvasRenderingContext2D) {
   for (const w of WALLS) {
     ctx.fillStyle = WALL_FILL;
     ctx.fillRect(w.x, w.y, w.w, w.h);
@@ -604,6 +604,10 @@ function drawWalls(ctx: CanvasRenderingContext2D, s: MapScene) {
   ctx.fillStyle = leak;
   ctx.fillRect(1430, 1230, 110, 58);
 
+
+}
+
+function drawDoors(ctx: CanvasRenderingContext2D, s: MapScene) {
   for (const d of DOORS) {
     const closed = s.closedDoors.includes(d.id);
     if (!closed) continue;
@@ -655,15 +659,64 @@ function drawStations(ctx: CanvasRenderingContext2D, s: MapScene) {
   }
 }
 
-export function drawMap(ctx: CanvasRenderingContext2D, s: MapScene) {
-  ctx.fillStyle = "#050505";
-  ctx.fillRect(-2000, -2000, MAP_WIDTH + 4000, MAP_HEIGHT + 4000);
+function drawVents(ctx: CanvasRenderingContext2D) {
+  for (const v of VENTS) {
+    const { x, y } = v.pos;
+    ctx.fillStyle = "#0a0a0a";
+    roundRect(ctx, x - 22, y - 14, 44, 28, 4);
+    ctx.fill();
+    ctx.strokeStyle = "#3a3a3a";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - 21, y - 13, 42, 26);
+    ctx.fillStyle = "#2a2a2a";
+    for (let i = 0; i < 5; i++) ctx.fillRect(x - 17 + i * 8, y - 9, 4, 18);
+  }
+}
+
+/**
+ * Parte fixa do mapa desenhada uma vez numa imagem (piso, luzes, textos,
+ * móveis, paredes, dutos). Só é refeita quando o apagão liga/desliga.
+ */
+export function buildMapCache(scale: number, s: Pick<MapScene, "lights" | "font" | "brand">) {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(MAP_WIDTH * scale);
+  canvas.height = Math.round(MAP_HEIGHT * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  const scene: MapScene = {
+    time: 0,
+    closedDoors: [],
+    lights: s.lights,
+    critical: false,
+    panels: null,
+    pendingTasks: new Set(),
+    showEmergency: false,
+    font: s.font,
+    brand: s.brand,
+    lobby: false,
+  };
   drawFloor(ctx);
   drawTrackLights(ctx, s.lights);
-  drawDecals(ctx, s);
+  drawDecals(ctx, scene);
+  drawVents(ctx);
+  drawFurniture(ctx, scene);
+  drawWalls(ctx);
+  return canvas;
+}
+
+/** Parte que muda a cada quadro: tarefas, painéis, botão de reunião, portas. */
+export function drawMapDynamic(ctx: CanvasRenderingContext2D, s: MapScene) {
   drawStations(ctx, s);
-  drawFurniture(ctx, s);
-  drawWalls(ctx, s);
+  if (s.showEmergency) {
+    const pulse = 0.5 + 0.5 * Math.sin(s.time * 0.005);
+    ctx.strokeStyle = `rgba(255,77,61,${0.25 + 0.35 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(EMERGENCY_POS.x, EMERGENCY_POS.y, 24 + pulse * 6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  drawDoors(ctx, s);
 }
 
 /** Trilhos de luz por cima de tudo (ficam "no teto"). */
@@ -682,6 +735,7 @@ export function drawFog(
   toScreen: (p: Point) => Point,
   zoom: number,
   darkness: number,
+  resolution = 1,
 ) {
   fog.save();
   fog.setTransform(1, 0, 0, 1, 0, 0);
@@ -690,15 +744,19 @@ export function drawFog(
   fog.fillStyle = `rgba(3,3,4,${darkness})`;
   fog.fillRect(0, 0, width, height);
   fog.globalCompositeOperation = "destination-out";
-  const o = toScreen(origin);
-  const r = radius * zoom;
+  const scaled = (p: Point) => {
+    const sp = toScreen(p);
+    return { x: sp.x * resolution, y: sp.y * resolution };
+  };
+  const o = scaled(origin);
+  const r = radius * zoom * resolution;
   const g = fog.createRadialGradient(o.x, o.y, r * 0.55, o.x, o.y, r);
   g.addColorStop(0, "rgba(0,0,0,1)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   fog.fillStyle = g;
   fog.beginPath();
   polygon.forEach((p, i) => {
-    const sp = toScreen(p);
+    const sp = scaled(p);
     if (i === 0) fog.moveTo(sp.x, sp.y);
     else fog.lineTo(sp.x, sp.y);
   });
