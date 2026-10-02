@@ -132,6 +132,7 @@ export class Room {
   round = 0;
   countdownEndsAt: number | null = null;
   frozenUntil = 0;
+  revealUntil = 0;
   bodies: Body[] = [];
   meeting: MeetingState | null = null;
   sabotage: SabotageState = emptySabotage();
@@ -339,6 +340,7 @@ export class Room {
       players,
       countdownEndsAt: this.countdownEndsAt,
       frozenUntil: this.frozenUntil,
+      revealUntil: this.revealUntil,
       tasks: { done, total },
       bodies: this.bodies,
       meeting,
@@ -390,6 +392,7 @@ export class Room {
       this.phase = "playing";
       this.countdownEndsAt = null;
       this.frozenUntil = now + ROLE_REVEAL_MS;
+      this.revealUntil = now + ROLE_REVEAL_MS;
       this.markDirty();
     }
 

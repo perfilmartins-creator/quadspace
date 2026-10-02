@@ -221,3 +221,11 @@ export const game = {
   resume: "Toque para continuar",
   backToSite: "quadspace.com.br",
 };
+
+export const crew = {
+  name: "AMOUNG QUAD",
+  shortName: "QUAD CREW",
+  description:
+    "Jogo multiplayer de dedução social da QUAD SPACE: entre numa sala com seus amigos, cumpra tarefas pelo estúdio e descubra o infiltrado.",
+  tagline: "Dedução social na QUAD. Cada um no seu celular, todos na mesma sala.",
+};

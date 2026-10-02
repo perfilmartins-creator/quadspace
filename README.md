@@ -40,6 +40,7 @@ src/
     page.tsx             # composição das seções da home
     privacidade/         # página de política de privacidade
     game/                # minigame QUAD BOUNCE (/game)
+    game/crew/           # AMOUNG QUAD — multiplayer de dedução social (/game/crew)
     globals.css          # design tokens (Tailwind v4 @theme)
     sitemap.ts / robots.ts
   config/
@@ -73,6 +74,33 @@ src/
   mensagens padrão definidas em `src/config/site.ts`. Enquanto o número não
   for preenchido, os botões caem para `mailto:` como alternativa segura (para
   não enviar mensagens a um número de terceiros por engano).
+
+## AMOUNG QUAD (`/game/crew`)
+
+Jogo multiplayer de dedução social. O cliente fica neste app Next.js; o
+servidor de tempo real é um processo Node + WebSocket separado, autoritativo
+(papéis, eliminações, votos, tarefas e vitória são decididos no servidor).
+
+```
+server/crew/index.ts       # servidor WebSocket (salas, senhas com scrypt, limites)
+server/crew/room.ts        # regras do jogo
+server/crew/smoke-test.ts  # teste ponta a ponta com vários clientes
+src/lib/crew/              # mapa da QUAD, colisão/visão e protocolo (compartilhados)
+src/components/crew/       # cliente: canvas, HUD, reunião, tarefas, sons
+```
+
+Rodar localmente (dois terminais):
+
+```bash
+npm run crew:server   # ws://localhost:3030
+npm run dev           # http://localhost:3000/game/crew
+```
+
+Teste do servidor: `PORT=3031 npm run crew:server` e, em outro terminal,
+`CREW_URL=ws://localhost:3031 npx tsx server/crew/smoke-test.ts`.
+
+Em produção o cliente conecta em `NEXT_PUBLIC_CREW_SERVER_URL` (ex.:
+`wss://quad-crew.onrender.com`). Ver DEPLOY.md.
 
 ## Deploy
 

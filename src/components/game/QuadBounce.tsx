@@ -318,9 +318,14 @@ export function QuadBounce() {
                   {game.best} {best}
                 </p>
               )}
-              <Link href="/" className="text-xs text-paper/40 transition-colors hover:text-paper">
-                ← {game.backToSite}
-              </Link>
+              <div className="flex items-center gap-5">
+                <Link href="/" className="text-xs text-paper/40 transition-colors hover:text-paper">
+                  ← {game.backToSite}
+                </Link>
+                <Link href="/game/crew" className="text-xs text-paper/40 transition-colors hover:text-paper">
+                  QUAD CREW →
+                </Link>
+              </div>
             </div>
           </div>
         )}

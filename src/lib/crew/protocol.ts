@@ -91,8 +91,10 @@ export type RoomState = {
   players: PublicPlayer[];
   /** Fim da contagem 3-2-1 (fase countdown). */
   countdownEndsAt: number | null;
-  /** Até quando o movimento fica travado (revelação do papel). */
+  /** Até quando o movimento fica travado (revelação do papel, volta da reunião). */
   frozenUntil: number;
+  /** Fim da tela secreta de papel desta rodada. */
+  revealUntil: number;
   tasks: { done: number; total: number };
   bodies: Body[];
   meeting: MeetingState | null;

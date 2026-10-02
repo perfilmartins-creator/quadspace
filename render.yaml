@@ -1,0 +1,19 @@
+# Servidor multiplayer do QUAD CREW (AMOUNG QUAD) no Render.
+# O site continua na Vercel; só o servidor de tempo real roda aqui.
+services:
+  - type: web
+    name: quad-crew
+    runtime: node
+    plan: free # "starter" evita que o servidor durma após 15 min sem uso
+    region: virginia
+    buildCommand: npm ci
+    startCommand: npm run crew:server
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: CREW_ALLOWED_ORIGINS
+        value: https://quadspace.com.br,https://www.quadspace.com.br

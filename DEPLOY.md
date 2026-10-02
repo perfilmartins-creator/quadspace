@@ -105,7 +105,27 @@ antigo) ou outro provedor:
 - Não delete zonas DNS inteiras nem registros que você não reconhece — se
   houver dúvida sobre o que um registro faz, confirme antes de remover.
 
-## 4. Antes de publicar em produção
+## 4. Servidor multiplayer do AMOUNG QUAD (Render)
+
+A Vercel não mantém um servidor de jogo rodando entre requisições, então o
+servidor do `/game/crew` roda no [Render](https://render.com):
+
+1. Crie uma conta no Render e conecte o GitHub.
+2. **New → Blueprint** → escolha o repositório `quadspace`. O arquivo
+   `render.yaml` já configura tudo (serviço `quad-crew`).
+3. Depois do deploy, copie a URL do serviço (ex.:
+   `https://quad-crew.onrender.com`) e teste `https://…/health`.
+4. Na Vercel, em **Settings → Environment Variables**, crie
+   `NEXT_PUBLIC_CREW_SERVER_URL` = `wss://quad-crew.onrender.com` (com `wss://`)
+   e faça um novo deploy do site.
+
+Plano gratuito: o servidor dorme após 15 min sem uso e leva ~30–60 s para
+acordar no primeiro acesso (o jogo mostra "CONECTANDO…" e espera). Para uso
+frequente na QUAD, o plano **Starter** mantém o servidor sempre ligado.
+Salas ficam só em memória: reiniciar o servidor encerra as partidas em
+andamento.
+
+## 5. Antes de publicar em produção
 
 - [ ] Preencher `contact.whatsappNumber` em `src/config/site.ts` com o número
       oficial de WhatsApp (formato `55DDDNUMERO`, só dígitos).

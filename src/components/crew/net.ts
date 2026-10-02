@@ -85,6 +85,8 @@ export class CrewClient {
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private noticeSeq = 0;
   private wantConnection = false;
+  private lastMessageAt = 0;
+  private watchdog: ReturnType<typeof setInterval> | null = null;
 
   /** Diferença relógio do servidor − relógio local (ms). */
   clockOffset = 0;
@@ -164,10 +166,13 @@ export class CrewClient {
     this.ws = ws;
     ws.onopen = () => {
       this.retry = 0;
+      this.lastMessageAt = Date.now();
+      this.startWatchdog(ws);
       this.ping();
       if (this.pending) ws.send(JSON.stringify(this.pending));
     };
     ws.onmessage = (event) => {
+      this.lastMessageAt = Date.now();
       try {
         this.handle(JSON.parse(String(event.data)) as ServerMessage);
       } catch {
@@ -186,6 +191,28 @@ export class CrewClient {
       this.scheduleRetry();
     };
   }
+
+  /**
+   * Quedas silenciosas de Wi-Fi não fecham o WebSocket na hora. O servidor manda
+   * posições ~15x por segundo: 5 s sem nada = conexão morta, reconecta.
+   */
+  private startWatchdog(ws: WebSocket) {
+    if (this.watchdog) clearInterval(this.watchdog);
+    this.watchdog = setInterval(() => {
+      if (this.ws !== ws) return;
+      if (Date.now() - this.lastMessageAt > 5000) {
+        ws.close();
+        ws.onclose?.(new CloseEvent("close"));
+      }
+    }, 1000);
+  }
+
+  /** O celular voltou a ter internet: tenta reconectar imediatamente. */
+  handleOnline = () => {
+    if (!this.wantConnection || (this.ws && this.ws.readyState === WebSocket.OPEN)) return;
+    this.retry = 0;
+    this.open();
+  };
 
   private scheduleRetry() {
     this.retry += 1;
@@ -230,6 +257,7 @@ export class CrewClient {
   /** Ao fechar a aba: mantém a sessão para reconectar. */
   dispose() {
     this.wantConnection = false;
+    if (this.watchdog) clearInterval(this.watchdog);
     if (this.retryTimer) clearTimeout(this.retryTimer);
     if (this.pingTimer) clearInterval(this.pingTimer);
     if (this.ws) {
