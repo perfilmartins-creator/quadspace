@@ -215,6 +215,7 @@ export const game = {
   score: "SCORE",
   best: "BEST",
   newBest: "NOVO RECORDE",
+  personalBest: "Seu recorde:",
   hint: "Toque na tela para criar uma plataforma",
   paused: "PAUSADO",
   resume: "Toque para continuar",

@@ -7,6 +7,13 @@ import { game } from "@/lib/content";
 import { readBest, readServerBest, saveBest, subscribeBest } from "./best-score";
 import { FIELD_WIDTH, MAX_FIELD_ASPECT } from "./config";
 import {
+  readGlobalBest,
+  readServerGlobalBest,
+  refreshGlobalRecord,
+  submitGlobalScore,
+  subscribeGlobalBest,
+} from "./global-record";
+import {
   createWorld,
   drainEvents,
   resizeWorld,
@@ -33,6 +40,11 @@ const RESTART_GUARD = 650;
 const MAX_FRAME_DT = 0.05;
 const MAX_DPR = 2.5;
 
+/** Recorde mostrado no jogo: o global (todos os jogadores) ou, sem rede, o local. */
+function currentBest() {
+  return readGlobalBest() ?? readBest();
+}
+
 function vibrate(pattern: number | number[]) {
   try {
     if (typeof navigator.vibrate === "function") navigator.vibrate(pattern);
@@ -50,7 +62,9 @@ export function QuadBounce() {
   const [result, setResult] = useState({ score: 0, newBest: false });
   const [restartReady, setRestartReady] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const best = useSyncExternalStore(subscribeBest, readBest, readServerBest);
+  const personalBest = useSyncExternalStore(subscribeBest, readBest, readServerBest);
+  const globalBest = useSyncExternalStore(subscribeGlobalBest, readGlobalBest, readServerGlobalBest);
+  const best = globalBest ?? personalBest;
 
   const rootRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -73,7 +87,7 @@ export function QuadBounce() {
       dpr: 1,
       fontFamily: getComputedStyle(document.body).fontFamily,
       reducedMotion: motionQuery.matches,
-      best: readBest(),
+      best: currentBest(),
     };
 
     let world: World = createWorld(200);
@@ -81,6 +95,7 @@ export function QuadBounce() {
     let raf = 0;
     let last = performance.now();
     let shownScore = -1;
+    let deaths = 0;
     const timers = new Set<number>();
 
     const later = (fn: () => void, ms: number) => {
@@ -119,10 +134,24 @@ export function QuadBounce() {
           vibrate(20);
         } else if (event.type === "death") {
           vibrate([40, 40, 70]);
-          const newBest = event.score > readBest();
-          if (newBest) saveBest(event.score);
+          const { score } = event;
+          const death = ++deaths;
+          const personal = score > readBest();
+          if (personal) saveBest(score);
+
+          // Mostra "novo recorde" na hora e confirma com o servidor em seguida.
+          const knownGlobal = readGlobalBest();
+          let newBest = knownGlobal === null ? personal : score > knownGlobal;
+          let shown = false;
+          void submitGlobalScore(score).then((isRecord) => {
+            if (isRecord === null || death !== deaths) return;
+            newBest = isRecord;
+            if (shown) setResult({ score, newBest });
+          });
+
           later(() => {
-            setResult({ score: event.score, newBest });
+            shown = true;
+            setResult({ score, newBest });
             setPhase("over");
             later(() => setRestartReady(true), RESTART_GUARD);
           }, GAME_OVER_DELAY);
@@ -144,6 +173,9 @@ export function QuadBounce() {
     };
 
     const beginRun = () => {
+      view.best = currentBest();
+      // Token novo para validar a pontuação desta partida no servidor.
+      void refreshGlobalRecord();
       startRun(world);
       paused = false;
       setShowHint(true);
@@ -156,7 +188,6 @@ export function QuadBounce() {
       },
       restart: () => {
         world = createWorld(world.height);
-        view.best = readBest();
         setRestartReady(false);
         beginRun();
       },
@@ -196,6 +227,7 @@ export function QuadBounce() {
     document.addEventListener("gesturechange", prevent);
     root.addEventListener("touchmove", prevent, { passive: false });
 
+    void refreshGlobalRecord();
     raf = requestAnimationFrame(frame);
 
     return () => {
@@ -326,6 +358,11 @@ export function QuadBounce() {
 
               <p className={`${label} mt-[min(2rem,4svh)]`}>{game.best}</p>
               <p className="mt-2 font-light text-3xl leading-none tabular-nums">{best}</p>
+              {globalBest !== null && personalBest > 0 && personalBest < globalBest && (
+                <p className="mt-3 text-xs text-paper/40">
+                  {game.personalBest} {personalBest}
+                </p>
+              )}
 
               <button
                 ref={restartRef}
