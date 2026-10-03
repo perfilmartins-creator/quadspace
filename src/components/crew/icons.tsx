@@ -87,3 +87,49 @@ export function IconClose({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconUsers({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5" />
+    </svg>
+  );
+}
+
+export function IconGear({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3" />
+    </svg>
+  );
+}
+
+export function IconPalette({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2s-.8-1.6-.8-2.6c0-1 .8-1.9 2-1.9H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z" />
+      <circle cx="7.5" cy="11" r="1.2" />
+      <circle cx="10" cy="7" r="1.2" />
+      <circle cx="15" cy="7.5" r="1.2" />
+    </svg>
+  );
+}
+
+export function IconSmile({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01" />
+    </svg>
+  );
+}
+
+export function IconFlag({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+    </svg>
+  );
+}

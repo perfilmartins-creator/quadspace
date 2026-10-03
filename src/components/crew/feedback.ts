@@ -129,6 +129,19 @@ function bleatSound(volume: number) {
 
 export const sfx = {
   bleat: (volume = 1) => bleatSound(volume),
+  ballHit: (power: number, volume = 1) => {
+    noise(0.07, 2400, 600, 0.35 * volume);
+    play([{ f: 140 + power * 90, t: 0, d: 0.09, type: "triangle", v: 0.6 * volume, slide: 80 }]);
+  },
+  goal: () => {
+    noise(0.6, 4000, 1200, 0.35);
+    play([{ f: 523, t: 0, d: 0.15 }, { f: 659, t: 0.12, d: 0.15 }, { f: 784, t: 0.24, d: 0.15 }, { f: 1047, t: 0.36, d: 0.45 }]);
+  },
+  ready: (on: boolean) => play(on ? [{ f: 660, t: 0, d: 0.1 }, { f: 990, t: 0.08, d: 0.18 }] : [{ f: 520, t: 0, d: 0.12 }]),
+  mode: () => play([{ f: 392, t: 0, d: 0.12, type: "triangle" }, { f: 587, t: 0.1, d: 0.2, type: "triangle" }]),
+  mission: () => play([{ f: 784, t: 0, d: 0.1 }, { f: 1047, t: 0.09, d: 0.1 }, { f: 1319, t: 0.18, d: 0.25 }]),
+  cancel: () => play([{ f: 440, t: 0, d: 0.15, type: "triangle" }, { f: 330, t: 0.13, d: 0.25, type: "triangle" }]),
+  emote: () => play([{ f: 880, t: 0, d: 0.06, v: 0.5 }]),
   join: () => play([{ f: 660, t: 0, d: 0.12 }, { f: 990, t: 0.08, d: 0.16 }]),
   leave: () => play([{ f: 660, t: 0, d: 0.12 }, { f: 440, t: 0.08, d: 0.16 }]),
   tap: () => play([{ f: 1200, t: 0, d: 0.05, v: 0.4 }]),

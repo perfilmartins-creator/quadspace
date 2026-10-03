@@ -3,13 +3,13 @@
 import WebSocket from "ws";
 import { BASE_SPEED } from "../../src/lib/crew/constants";
 import type { Point } from "../../src/lib/crew/map";
-import type { ChatMessage, ClientMessage, RoomState, ServerMessage } from "../../src/lib/crew/protocol";
+import type { ChatMessage, ClientMessage, LobbyFx, RoomState, ServerMessage } from "../../src/lib/crew/protocol";
 
 export const URL = process.env.CREW_URL ?? "ws://localhost:3031";
 const ORIGIN = "http://localhost:3000";
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-import { path } from "../../src/lib/crew/pathfind";
+import { lobbyNavigator, path } from "../../src/lib/crew/pathfind";
 export { path };
 
 // ---------- Cliente bot ----------
@@ -65,10 +65,23 @@ export class Bot {
         else if (msg.type === "chat") this.chats.push(msg.message);
         else if (msg.type === "killed") this.killed.push(msg.victimId);
         else if (msg.type === "kicked") this.kicked = true;
+        else if (msg.type === "fx") this.fx.push(msg.fx);
+        else if (msg.type === "emote") this.emotes.push(msg);
       });
     });
   }
   lastSnap: [string, number, number, 0 | 1][] = [];
+  fx: LobbyFx[] = [];
+  emotes: { playerId: string; emote: string }[] = [];
+  /** Posição de qualquer entidade no último snapshot (jogador, "@ball", "@julio"). */
+  entity(id: string) {
+    const e = this.lastSnap.find((x) => x[0] === id);
+    return e ? { x: e[1], y: e[2] } : null;
+  }
+  get inLobbyScene() {
+    const phase = this.state?.phase;
+    return phase === "lobby" || phase === "countdown";
+  }
   syncPos() {
     const mine = this.lastSnap.find((e) => e[0] === this.playerId);
     if (mine) this.pos = { x: mine[1], y: mine[2] };
@@ -81,8 +94,10 @@ export class Bot {
   }
   async walkTo(target: Point, speedMul = 1) {
     const step = (BASE_SPEED * speedMul) / 15;
-    for (const wp of path(this.pos, target)) {
-      while (Math.hypot(wp.x - this.pos.x, wp.y - this.pos.y) > 1) {
+    const route = this.inLobbyScene ? lobbyNavigator().path(this.pos, target) : path(this.pos, target);
+    for (const wp of route) {
+      // Limite de passos: se o servidor corrigir (parede), desiste do ponto em vez de travar.
+      for (let guard = 0; guard < 300 && Math.hypot(wp.x - this.pos.x, wp.y - this.pos.y) > 1; guard++) {
         const dx = wp.x - this.pos.x;
         const dy = wp.y - this.pos.y;
         const d = Math.hypot(dx, dy);
@@ -91,6 +106,18 @@ export class Bot {
         this.send({ type: "move", x: this.pos.x, y: this.pos.y });
         await sleep(1000 / 15);
       }
+    }
+  }
+  /** Corre em linha reta (sem a grade do BFS), para chutes precisos. */
+  async runStraight(target: Point, speedMul = 1) {
+    const step = (BASE_SPEED * speedMul) / 15;
+    for (let guard = 0; guard < 300 && Math.hypot(target.x - this.pos.x, target.y - this.pos.y) > 1; guard++) {
+      const dx = target.x - this.pos.x;
+      const dy = target.y - this.pos.y;
+      const k = Math.min(1, step / Math.hypot(dx, dy));
+      this.pos = { x: this.pos.x + dx * k, y: this.pos.y + dy * k };
+      this.send({ type: "move", x: this.pos.x, y: this.pos.y });
+      await sleep(1000 / 15);
     }
   }
   close() {

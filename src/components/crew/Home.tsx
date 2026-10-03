@@ -144,6 +144,22 @@ export function Home({ client, snapshot, initialCode }: { client: CrewClient; sn
 
 const RULES: { title: string; body: string[] }[] = [
   {
+    title: "O lobby",
+    body: [
+      "Enquanto a galera chega, o lobby já é jogo: ande, chute a bola, faça gol, cumpra missões e mande emotes.",
+      "Precisa sair um pouco? Fique na SAFE ZONE: ninguém te atrapalha lá. Pronto para jogar? Pare na READY ZONE ou toque em PRONTO?.",
+      "O host escolhe o modo e as configurações nos totens (ou nos ícones do topo) e inicia quando todos estiverem prontos.",
+    ],
+  },
+  {
+    title: "Modos de jogo",
+    body: [
+      "Clássico: tripulantes fazem tarefas e votam; o infiltrado elimina e sabota.",
+      "Esconde-esconde: um caçador é liberado depois de alguns segundos; os fugitivos sobrevivem até o tempo acabar. Tarefas tiram segundos do relógio.",
+      "Infecção: quem é pego vira infectado. Os saudáveis vencem se alguém sobreviver até o fim.",
+    ],
+  },
+  {
     title: "O objetivo",
     body: [
       "Tripulantes: completem todas as tarefas da QUAD ou descubram e expulsem os infiltrados.",
@@ -181,7 +197,7 @@ const RULES: { title: string; body: string[] }[] = [
     title: "Controles",
     body: [
       "Celular: arraste o polegar na metade esquerda para andar; botões grandes à direita.",
-      "Computador: WASD/setas para andar · E ou Espaço usar · R reportar · Q eliminar · F sabotar · V duto · M mapa.",
+      "Computador: WASD/setas para andar · E ou Espaço usar/interagir · R reportar (no lobby: READY) · Q eliminar · F sabotar · V duto · M mapa · T emotes.",
     ],
   },
 ];

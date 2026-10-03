@@ -82,12 +82,21 @@ servidor de tempo real é um processo Node + WebSocket separado, autoritativo
 (papéis, eliminações, votos, tarefas e vitória são decididos no servidor).
 
 ```
-server/crew/index.ts       # servidor WebSocket (salas, senhas com scrypt, limites)
-server/crew/room.ts        # regras do jogo
-server/crew/smoke-test.ts  # teste ponta a ponta com vários clientes
-src/lib/crew/              # mapa da QUAD, colisão/visão e protocolo (compartilhados)
-src/components/crew/       # cliente: canvas, HUD, reunião, tarefas, sons
+server/crew/hub.ts         # salas, senhas (scrypt), limites e roteamento de mensagens
+server/crew/room.ts        # estados da sala (lobby → countdown → playing → meeting → ended) e regras
+server/crew/modes.ts       # regras por modo: Clássico, Esconde-esconde, Infecção
+server/crew/lobby.ts       # lobby jogável: física da bola (autoritativa), missões
+server/crew/smoke-test.ts  # teste ponta a ponta do modo clássico (vários clientes)
+server/crew/lobby-test.ts  # teste do lobby, bola, READY, modos, AFK e troca de host
+src/lib/crew/              # mapas (partida e lobby), modos, missões, colisão e protocolo
+src/components/crew/       # cliente: canvas, HUD minimalista, painéis, reunião, tarefas, sons
 ```
+
+Fluxo: o lobby é um mapa jogável (bola com gols e placar, Safe Zone, Ready Zone,
+missões, emotes, totens de modo/configuração e o Júlio, a cabra). O host escolhe o
+modo e as configurações (com presets), todos ficam READY, a contagem de 5 s roda no
+próprio lobby (cancelável) e a partida começa sem recarregar a página. No fim, todos
+voltam ao mesmo lobby com a bola resetada e as configurações mantidas.
 
 Rodar localmente (dois terminais):
 
@@ -96,8 +105,10 @@ npm run crew:server   # ws://localhost:3030
 npm run dev           # http://localhost:3000/game/crew
 ```
 
-Teste do servidor: `PORT=3031 npm run crew:server` e, em outro terminal,
-`CREW_URL=ws://localhost:3031 npx tsx server/crew/smoke-test.ts`.
+Testes do servidor: `PORT=3031 npm run crew:server` e, em outro terminal,
+`CREW_URL=ws://localhost:3031 npx tsx server/crew/smoke-test.ts`. Para o lobby,
+suba o servidor com `CREW_AFK_MS=4000 CREW_AFK_SAFE_MS=7000` e rode
+`CREW_URL=ws://localhost:3031 npx tsx server/crew/lobby-test.ts`.
 
 Em produção o cliente conecta em `NEXT_PUBLIC_CREW_SERVER_URL` (ex.:
 `wss://quad-crew.onrender.com`). Ver DEPLOY.md.

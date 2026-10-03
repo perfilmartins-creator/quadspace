@@ -2,25 +2,32 @@
 // e um store simples para o React (useSyncExternalStore).
 
 import { INTERP_DELAY, NET_RATE } from "@/lib/crew/constants";
+import { EMOTES, type EmoteId } from "@/lib/crew/lobby";
+import { MODES } from "@/lib/crew/modes";
 import { CREW_SERVER_URL } from "@/lib/crew/server-url";
+import { sfx, vibrate } from "./feedback";
 import type { Point, TaskId } from "@/lib/crew/map";
 import {
   ERROR_MESSAGES,
   type ChatMessage,
   type ClientMessage,
   type ErrorCode,
+  type LobbyFx,
   type RoomState,
   type ServerMessage,
 } from "@/lib/crew/protocol";
 
 export type Status = "idle" | "connecting" | "online" | "reconnecting" | "offline";
 
+export type NoticeTone = "info" | "goal" | "mission" | "good" | "alert";
+export type Notice = { id: number; text: string; tone: NoticeTone };
+
 export type Snapshot = {
   status: Status;
   state: RoomState | null;
   error: { code: ErrorCode | "NETWORK"; message: string } | null;
   chat: ChatMessage[];
-  notices: { id: number; text: string }[];
+  notices: Notice[];
   /** Mudou a cada tarefa concluída (para tocar som / fechar o minigame). */
   lastTaskDone: { taskId: TaskId; at: number } | null;
   /** Você foi eliminado agora (para a animação de morte). */
@@ -108,6 +115,10 @@ export class CrewClient {
   kills: KillFx[] = [];
   /** Último balido do Júlio (performance.now()). */
   bleat: { at: number; byId: string | null; byName: string | null } | null = null;
+  /** Emotes recentes por jogador (performance.now()). */
+  emotes = new Map<string, { emote: EmoteId; at: number }>();
+  /** Últimos chutes na bola (para partículas). */
+  ballHits: { x: number; y: number; at: number; power: number }[] = [];
   private lastSent = { x: 0, y: 0, at: 0 };
 
   // ---------- Store ----------
@@ -364,12 +375,15 @@ export class CrewClient {
       case "killed":
         this.kills.push({ victimId: msg.victimId, x: msg.x, y: msg.y, at: performance.now() });
         break;
-      case "notice": {
-        const id = ++this.noticeSeq;
-        this.update({ notices: [...this.snapshot.notices.slice(-3), { id, text: msg.text }] });
-        setTimeout(() => this.update({ notices: this.snapshot.notices.filter((n) => n.id !== id) }), 2800);
+      case "notice":
+        this.toast(msg.text, "info");
         break;
-      }
+      case "emote":
+        this.emotes.set(msg.playerId, { emote: msg.emote, at: performance.now() });
+        break;
+      case "fx":
+        this.handleFx(msg.fx);
+        break;
       case "taskDone":
         this.update({ lastTaskDone: { taskId: msg.taskId, at: Date.now() } });
         break;
@@ -453,6 +467,72 @@ export class CrewClient {
     track.lastY = y;
     track.moving = moving;
     return { x, y, moving };
+  }
+
+  /** Aviso curto e discreto (some sozinho). */
+  toast(text: string, tone: NoticeTone = "info", ms = 2600) {
+    const id = ++this.noticeSeq;
+    this.update({ notices: [...this.snapshot.notices.slice(-2), { id, text, tone }] });
+    setTimeout(() => this.update({ notices: this.snapshot.notices.filter((n) => n.id !== id) }), ms);
+  }
+
+  /** Eventos do lobby: som, vibração e aviso. */
+  private handleFx(fx: LobbyFx) {
+    const me = this.session?.playerId;
+    switch (fx.kind) {
+      case "hit": {
+        this.ballHits.push({ x: fx.x, y: fx.y, at: performance.now(), power: fx.power });
+        if (this.ballHits.length > 8) this.ballHits.shift();
+        const d = Math.hypot(this.local.x - fx.x, this.local.y - fx.y);
+        const volume = fx.byId === me ? 1 : Math.max(0, 1 - d / 700);
+        if (volume > 0.08) sfx.ballHit(fx.power, volume);
+        if (fx.byId === me) vibrate(12);
+        break;
+      }
+      case "goal": {
+        sfx.goal();
+        vibrate([40, 30, 40]);
+        const who = fx.byName ? ` ${fx.byName.toUpperCase()}` : "";
+        this.toast(`GOOOOL!${who} · AZUL ${fx.score.blue} × ${fx.score.red} VERMELHO`, "goal", 2200);
+        break;
+      }
+      case "mission":
+        sfx.mission();
+        vibrate(30);
+        this.toast(`MISSÃO CONCLUÍDA · +${fx.reward} XP`, "mission", 2200);
+        break;
+      case "ready":
+        if (fx.playerId === me) {
+          sfx.ready(fx.ready);
+          vibrate(fx.ready ? 25 : 10);
+        }
+        break;
+      case "mode":
+        sfx.mode();
+        this.toast(`MODO ALTERADO · ${MODES[fx.mode].name.toUpperCase()}`, "good", 2400);
+        break;
+      case "host":
+        this.toast(`${fx.name.toUpperCase()} É O NOVO HOST`, "info", 2600);
+        break;
+      case "cancel":
+        sfx.cancel();
+        this.toast(`PARTIDA CANCELADA · ${fx.reason}`, "alert", 2400);
+        break;
+      case "joined":
+        sfx.join();
+        this.toast(`${fx.name.toUpperCase()} ENTROU`, "info", 2000);
+        break;
+      case "coffee":
+        this.toast(`☕ ${fx.byName} pegou um café`, "info", 2000);
+        break;
+      case "tv":
+        this.toast(`📺 ${fx.byName} trocou o canal da TV`, "info", 2000);
+        break;
+    }
+  }
+
+  emoteLabel(id: EmoteId) {
+    return EMOTES.find((e) => e.id === id);
   }
 
   /** Envia a posição local em NET_RATE Hz quando ela muda. */

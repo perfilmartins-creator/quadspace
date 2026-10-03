@@ -1,4 +1,14 @@
 // Uma sala do QUAD CREW. Toda regra do jogo é decidida aqui (servidor autoritativo).
+//
+// Estados (phase):            cena
+//   lobby      LOBBY          lobby   — mapa jogável: bola, missões, Safe Zone, READY
+//   countdown  STARTING       lobby   — 5 s, ainda dá para andar; o host pode cancelar
+//   playing    IN_GAME        partida
+//   meeting    MEETING        partida (só no modo clássico)
+//   ejecting   MEETING        partida (resultado da votação)
+//   ended      RESULT         partida — depois todos voltam ao lobby (RETURNING_TO_LOBBY)
+//
+// Regras que mudam entre modos ficam em ./modes.ts; o lobby jogável em ./lobby.ts.
 
 import { randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import type { WebSocket } from "ws";
@@ -11,49 +21,64 @@ import {
   DOORS_DURATION_MS,
   EJECT_MS,
   EMERGENCY_RANGE,
-  KILL_COOLDOWN_START_MS,
+  GOAT_ID,
+  GOAT_SPEED,
+  HOST_GRACE_MS,
   KILL_RANGE,
-  VENT_RANGE,
   MEETING_INTRO_MS,
   MIN_PLAYERS,
   PANEL_HOLD_MS,
+  PET_COOLDOWN_MS,
+  PET_RANGE,
   RECONNECT_GRACE_MS,
   REPORT_RANGE,
   ROLE_REVEAL_MS,
   SABOTAGE_COOLDOWN_MS,
   TASK_MIN_MS,
   USE_RANGE,
-  VISION_BLACKOUT,
-  VISION_CREW,
-  VISION_INFILTRATOR,
+  VENT_RANGE,
   VOTE_RESULT_MS,
-  maxInfiltratorsFor,
   sanitizeChat,
   sanitizeSettings,
   type Settings,
-  GOAT_ID,
-  GOAT_SPEED,
-  PET_COOLDOWN_MS,
-  PET_RANGE,
 } from "../../src/lib/crew/constants";
+import {
+  AFK_MS,
+  AFK_SAFE_MS,
+  EMOTES,
+  EMOTE_COOLDOWN_MS,
+  LOBBY_INTERACT_RANGE,
+  LOBBY_OBJECTS,
+  LOBBY_SOLIDS,
+  READY_HOLD_MS,
+  READY_ZONE,
+  SAFE_ZONE,
+  inRect,
+  inSafeZone,
+  lobbyAreaAt,
+  lobbySpawnPoint,
+  type EmoteId,
+  type LobbyObjectId,
+} from "../../src/lib/crew/lobby";
 import {
   CRITICAL_PANELS,
   EMERGENCY_POS,
   LIGHTS_PANEL,
   TASKS,
+  VENTS,
   distance,
   doorsOfRoom,
   roomAt,
   spawnPoint,
-  VENTS,
   taskById,
   ventById,
   type PanelId,
-  type VentId,
   type Point,
   type TaskId,
+  type VentId,
 } from "../../src/lib/crew/map";
-import { nearestFreePoint, path as findPath, simplify } from "../../src/lib/crew/pathfind";
+import { PRESETS, modeOf } from "../../src/lib/crew/modes";
+import { gameNavigator, lobbyNavigator, simplify, type Navigator } from "../../src/lib/crew/pathfind";
 import { canSee, collides, moveGhost, moveWithCollision, pathClear, solidsWith, visionSegments } from "../../src/lib/crew/physics";
 import type {
   Body,
@@ -62,6 +87,7 @@ import type {
   EjectState,
   EndReason,
   EndState,
+  LobbyFx,
   MeetingState,
   Phase,
   PublicPlayer,
@@ -70,8 +96,11 @@ import type {
   SabotageKind,
   SabotageState,
   ServerMessage,
+  TimerView,
   VoteTarget,
 } from "../../src/lib/crew/protocol";
+import { currentMission, newBall, newMissionTracker, resetBall, stepBall, trackMission, type BallState, type Kicker, type MissionTracker } from "./lobby";
+import { MODE_RULES, type ModeRules } from "./modes";
 
 export type Player = {
   id: string;
@@ -85,6 +114,9 @@ export type Player = {
   x: number;
   y: number;
   lastMoveAt: number;
+  /** Velocidade estimada a partir dos últimos movimentos (para chutar a bola). */
+  vx: number;
+  vy: number;
   role: Role | null;
   alive: boolean;
   /** A morte já foi descoberta por todos (reunião). */
@@ -96,24 +128,33 @@ export type Player = {
   emergencyLeft: number;
   killReadyAt: number;
   sabotageReadyAt: number;
+  /** Preso até este instante (caçador antes de ser liberado). */
+  releaseAt: number;
   vote: VoteTarget | null;
   chatTimes: number[];
   vent: VentId | null;
+  // ---- Lobby ----
+  ready: boolean;
+  readyZoneSince: number;
+  readyAt: number;
+  safe: boolean;
+  afk: boolean;
+  afkMoved: boolean;
+  lastActiveAt: number;
+  emoteAt: number;
+  interactAt: number;
+  lastKickAt: number;
+  missions: MissionTracker;
 };
 
 const ENDED_AUTO_LOBBY_MS = 90_000;
 const CHAT_MIN_INTERVAL = 600;
 const CHAT_BURST = 6;
 const CHAT_WINDOW = 10_000;
-
-function shuffle<T>(items: T[]): T[] {
-  const a = [...items];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
+const HIT_FX_INTERVAL_MS = 90;
+/** Limites de AFK (ajustáveis por variável de ambiente para testes). */
+const AFK_LIMIT_MS = Number(process.env.CREW_AFK_MS ?? AFK_MS);
+const AFK_SAFE_LIMIT_MS = Number(process.env.CREW_AFK_SAFE_MS ?? AFK_SAFE_MS);
 
 function VENTS_NEAR(p: { x: number; y: number }) {
   return VENTS.find((v) => distance(p, v.pos) <= VENT_RANGE);
@@ -133,12 +174,21 @@ function emptySabotage(): SabotageState {
   return { lights: false, critical: null, doors: null };
 }
 
-export class Room {
-  readonly code: string;
-  /** "salt:hash" (scrypt). A senha nunca é guardada em texto puro. */
-  readonly passwordHash: string;
-  readonly createdAt = Date.now();
+const GAME_GOAT_SPOTS: Point[] = [...TASKS.map((t) => t.pos), EMERGENCY_POS, { x: 330, y: 1120 }, { x: 1500, y: 1180 }, { x: 900, y: 640 }];
+const LOBBY_GOAT_SPOTS: Point[] = [
+  { x: 120, y: 620 },
+  { x: 420, y: 900 },
+  { x: 700, y: 600 },
+  { x: 980, y: 900 },
+  { x: 1300, y: 620 },
+  { x: 260, y: 330 },
+  { x: 1150, y: 330 },
+];
 
+export class Room {
+  code: string;
+  passwordHash: string;
+  createdAt = Date.now();
   players = new Map<string, Player>();
   hostId = "";
   phase: Phase = "lobby";
@@ -155,13 +205,21 @@ export class Room {
   end: EndState | null = null;
   endedAt = 0;
   emptySince: number | null = null;
+  timer: TimerView | null = null;
+
+  // ---- Lobby jogável ----
+  ball: BallState = newBall();
+  score = { red: 0, blue: 0 };
+  private lastHitFxAt = 0;
+  private lastTick = 0;
 
   private dirty = true;
   private chatSeq = 0;
 
-  /** Júlio, a cabra da QUAD: passeia pelo estúdio, bale e aceita carinho. Não interfere nas regras. */
+  /** Júlio, a cabra da QUAD: passeia pela cena atual, bale e aceita carinho. Não interfere nas regras. */
   goat = {
-    pos: nearestFreePoint({ x: 330, y: 1120 }),
+    scene: "lobby" as "lobby" | "game",
+    pos: lobbyNavigator().nearestFree({ x: 420, y: 900 }),
     route: [] as Point[],
     restUntil: 0,
     nextBleatAt: 0,
@@ -173,6 +231,15 @@ export class Room {
   constructor(code: string, passwordHash: string) {
     this.code = code;
     this.passwordHash = passwordHash;
+  }
+
+  get rules(): ModeRules {
+    return MODE_RULES[this.settings.gameMode] ?? MODE_RULES.classic;
+  }
+
+  /** Cena física em que os personagens estão. */
+  get scene(): "lobby" | "game" {
+    return this.phase === "lobby" || this.phase === "countdown" ? "lobby" : "game";
   }
 
   // ---------- Jogadores ----------
@@ -190,11 +257,21 @@ export class Room {
     return this.playerList.some((p) => p.name.toLocaleLowerCase("pt-BR") === lower);
   }
 
+  /** Ponto livre na área de spawn do lobby, longe de quem já está lá. */
+  private freeLobbySpawn(exceptId?: string): Point {
+    const others = this.playerList.filter((p) => p.id !== exceptId);
+    for (let i = 0; i < 17; i++) {
+      const s = lobbySpawnPoint(i);
+      if (others.every((p) => Math.hypot(p.x - s.x, p.y - s.y) > 40)) return s;
+    }
+    return lobbySpawnPoint(randomInt(17));
+  }
+
   addPlayer(name: string, socket: WebSocket): Player {
     const now = Date.now();
     const used = new Set(this.playerList.map((p) => p.color));
     const color = COLORS.find((c) => !used.has(c.id))?.id ?? COLORS[0].id;
-    const spawn = spawnPoint(this.players.size, Math.max(this.settings.maxPlayers, this.players.size + 1));
+    const spawn = this.scene === "lobby" ? this.freeLobbySpawn() : spawnPoint(this.players.size, Math.max(this.settings.maxPlayers, this.players.size + 1));
     const player: Player = {
       id: newId(),
       token: newId(24),
@@ -207,6 +284,8 @@ export class Room {
       x: spawn.x,
       y: spawn.y,
       lastMoveAt: now,
+      vx: 0,
+      vy: 0,
       role: null,
       alive: true,
       deathKnown: false,
@@ -216,19 +295,31 @@ export class Room {
       emergencyLeft: 0,
       killReadyAt: 0,
       sabotageReadyAt: 0,
+      releaseAt: 0,
       vote: null,
       chatTimes: [],
       vent: null,
+      ready: false,
+      readyZoneSince: 0,
+      readyAt: 0,
+      safe: false,
+      afk: false,
+      afkMoved: false,
+      lastActiveAt: now,
+      emoteAt: 0,
+      interactAt: 0,
+      lastKickAt: 0,
+      missions: newMissionTracker(),
     };
     this.players.set(player.id, player);
     if (!this.hostId || !this.players.has(this.hostId)) this.hostId = player.id;
     this.emptySince = null;
-    this.notice(`${name} entrou`, player.id);
+    this.broadcastFx({ kind: "joined", name }, player.id);
     this.markDirty();
     return player;
   }
 
-  /** Reconecta um jogador existente (mesmo id + token). */
+  /** Reconecta um jogador existente (mesmo id + token). Posição, READY, papel e tarefas são mantidos. */
   resume(playerId: string, token: string, socket: WebSocket): Player | null {
     const player = this.players.get(playerId);
     if (!player || !safeEqual(player.token, token)) return null;
@@ -243,6 +334,7 @@ export class Room {
     player.connected = true;
     player.disconnectedAt = 0;
     player.lastMoveAt = Date.now();
+    player.lastActiveAt = Date.now();
     this.emptySince = null;
     this.markDirty();
     return player;
@@ -261,6 +353,7 @@ export class Room {
     const player = this.players.get(playerId);
     if (!player) return;
     this.players.delete(playerId);
+    this.petAt.delete(playerId);
     if (player.socket) {
       try {
         if (reason === "kick") this.sendTo(player, { type: "kicked" });
@@ -272,6 +365,7 @@ export class Room {
     if (this.hostId === playerId) {
       const next = this.playerList.find((p) => p.connected) ?? this.playerList[0];
       this.hostId = next?.id ?? "";
+      if (next) this.broadcastFx({ kind: "host", name: next.name });
     }
     this.bodies = this.bodies.filter((b) => b.id !== playerId);
     for (const p of this.players.values()) {
@@ -280,12 +374,14 @@ export class Room {
     if (this.meeting) this.meeting.voted = this.meeting.voted.filter((id) => id !== playerId);
     this.notice(reason === "kick" ? `${player.name} foi removido pelo host` : `${player.name} saiu`);
     if (this.players.size > 0 && this.connectedCount === 0 && this.emptySince === null) this.emptySince = Date.now();
+    if (this.phase === "countdown") this.validateCountdown();
     if (this.inGame()) this.checkWin("abandon");
     this.markDirty();
   }
 
+  /** Partida em andamento (fora do lobby). */
   inGame() {
-    return this.phase === "countdown" || this.phase === "playing" || this.phase === "meeting" || this.phase === "ejecting";
+    return this.phase === "playing" || this.phase === "meeting" || this.phase === "ejecting";
   }
 
   // ---------- Envio ----------
@@ -302,6 +398,15 @@ export class Room {
 
   private notice(text: string, exceptId?: string) {
     for (const p of this.players.values()) if (p.id !== exceptId) this.sendTo(p, { type: "notice", text });
+  }
+
+  /** Aviso curto para todos (usado pelas regras dos modos). */
+  announce(text: string) {
+    this.notice(text);
+  }
+
+  private broadcastFx(fx: LobbyFx, exceptId?: string) {
+    for (const p of this.players.values()) if (p.id !== exceptId) this.sendTo(p, { type: "fx", fx });
   }
 
   /** Envia o estado personalizado para todos, se algo mudou. */
@@ -326,6 +431,7 @@ export class Room {
   }
 
   stateFor(viewer: Player): RoomState {
+    const rules = this.rules;
     const players: PublicPlayer[] = this.playerList.map((p) => {
       const pub: PublicPlayer = {
         id: p.id,
@@ -334,11 +440,15 @@ export class Room {
         isHost: p.id === this.hostId,
         connected: p.connected,
         alive: this.knowsDeath(viewer, p) ? p.alive : true,
+        ready: p.ready,
+        afk: p.afk,
+        safe: p.safe,
       };
       if (
         p.role &&
         (this.phase === "ended" ||
           p.roleRevealed ||
+          rules.publicRole(p) ||
           (viewer.role === "infiltrator" && p.role === "infiltrator"))
       ) {
         pub.role = p.role;
@@ -357,6 +467,7 @@ export class Room {
     const crew = this.playerList.filter((p) => p.role === "crew");
     const total = crew.reduce((sum, p) => sum + p.tasks.length, 0);
     const done = crew.reduce((sum, p) => sum + p.tasks.filter((t) => t.done).length, 0);
+    const inMatch = this.inGame();
 
     return {
       code: this.code,
@@ -374,6 +485,8 @@ export class Room {
       eject: this.eject,
       end: this.end,
       round: this.round,
+      lobby: { score: { ...this.score }, ballFrozenUntil: this.ball.frozenUntil },
+      timer: inMatch ? this.timer : null,
       you: {
         id: viewer.id,
         role: viewer.role,
@@ -383,29 +496,41 @@ export class Room {
         killReadyAt: viewer.killReadyAt,
         sabotageReadyAt: viewer.sabotageReadyAt,
         partners:
-          viewer.role === "infiltrator"
+          viewer.role === "infiltrator" && this.settings.gameMode === "classic"
             ? this.playerList.filter((p) => p.role === "infiltrator" && p.id !== viewer.id).map((p) => p.id)
             : [],
         vote: viewer.vote,
         vent: viewer.vent,
+        speed: this.speedOf(viewer),
+        vision: inMatch && this.settings.gameMode !== "classic" ? rules.visionOf(this, viewer) : null,
+        releaseAt: viewer.releaseAt,
+        mission: currentMission(viewer.missions),
+        missionsDone: viewer.missions.index,
+        xp: viewer.missions.xp,
       },
     };
   }
 
-  /** Posições: vivos não recebem fantasmas; fantasmas veem todos. */
+  speedOf(p: Player) {
+    return this.scene === "lobby" ? 1 : this.rules.speedOf(this, p);
+  }
+
+  /** Posições: vivos não recebem fantasmas; fantasmas veem todos. Bola e Júlio vão junto. */
   private sendSnapshots(now: number) {
     const list = this.playerList;
+    const inLobby = this.scene === "lobby";
     for (const viewer of list) {
       if (!viewer.connected) continue;
       const p: [string, number, number, 0 | 1][] = [];
       for (const q of list) {
-        const ghost = this.phase !== "lobby" && this.phase !== "ended" && !q.alive;
-        if (ghost && viewer.alive && this.inGame()) continue;
+        const ghost = this.inGame() && !q.alive;
+        if (ghost && viewer.alive) continue;
         // Escondido no duto: some para todo mundo (menos para si mesmo).
         if (q.vent && q.id !== viewer.id) continue;
         p.push([q.id, Math.round(q.x), Math.round(q.y), ghost ? 1 : 0]);
       }
-      p.push([GOAT_ID, Math.round(this.goat.pos.x), Math.round(this.goat.pos.y), 0]);
+      if (inLobby) p.push(["@ball", Math.round(this.ball.x), Math.round(this.ball.y), 0]);
+      if (this.goat.scene === this.scene) p.push([GOAT_ID, Math.round(this.goat.pos.x), Math.round(this.goat.pos.y), 0]);
       this.sendTo(viewer, { type: "snap", t: now, p });
     }
   }
@@ -413,20 +538,21 @@ export class Room {
   // ---------- Loop ----------
 
   tick(now: number) {
+    const dt = this.lastTick ? Math.min(0.2, (now - this.lastTick) / 1000) : 1 / 20;
+    this.lastTick = now;
+
     // Jogadores desconectados por tempo demais saem da sala.
     for (const p of this.playerList) {
       if (!p.connected && now - p.disconnectedAt > RECONNECT_GRACE_MS) this.removePlayer(p.id, "timeout");
     }
+    this.tickHost(now);
 
-    if (this.phase === "countdown" && this.countdownEndsAt !== null && now >= this.countdownEndsAt) {
-      this.phase = "playing";
-      this.countdownEndsAt = null;
-      this.frozenUntil = now + ROLE_REVEAL_MS;
-      this.revealUntil = now + ROLE_REVEAL_MS;
-      this.markDirty();
+    if (this.phase === "countdown" && this.countdownEndsAt !== null && now >= this.countdownEndsAt) this.beginMatch(now);
+
+    if (this.phase === "playing") {
+      this.tickSabotage(now);
+      this.rules.tick(this, now);
     }
-
-    if (this.phase === "playing") this.tickSabotage(now);
     if (this.phase === "meeting") this.tickMeeting(now);
 
     if (this.phase === "ejecting" && this.eject && now >= this.eject.endsAt) {
@@ -436,9 +562,23 @@ export class Room {
 
     if (this.phase === "ended" && now - this.endedAt > ENDED_AUTO_LOBBY_MS) this.backToLobby();
 
+    if (this.scene === "lobby") this.tickLobby(now, dt);
+    this.tickAfk(now);
     this.tickGoat(now);
     this.sendSnapshots(now);
     this.flush();
+  }
+
+  /** Host caiu e não voltou em alguns segundos: passa para quem está há mais tempo na sala. */
+  private tickHost(now: number) {
+    const host = this.players.get(this.hostId);
+    if (host && (host.connected || now - host.disconnectedAt < HOST_GRACE_MS)) return;
+    const next = this.playerList.find((p) => p.connected);
+    if (!next || next.id === this.hostId) return;
+    this.hostId = next.id;
+    this.broadcastFx({ kind: "host", name: next.name });
+    if (this.phase === "countdown") this.cancelCountdown("O host saiu");
+    this.markDirty();
   }
 
   private tickSabotage(now: number) {
@@ -467,21 +607,182 @@ export class Room {
     }
   }
 
-  // ---------- Lobby ----------
+  // ---------- Lobby jogável ----------
+
+  private tickLobby(now: number, dt: number) {
+    const kickers: Kicker[] = [];
+    for (const p of this.players.values()) {
+      if (!p.connected) continue;
+      // Parado há mais de 150 ms: velocidade zero (não "chuta" sem querer).
+      if (now - p.lastMoveAt > 150) {
+        p.vx = 0;
+        p.vy = 0;
+      }
+      // READY ZONE: ficar ~1 s dentro marca READY (sair não desmarca).
+      if (inRect(p, READY_ZONE)) {
+        if (!p.readyZoneSince) p.readyZoneSince = now;
+        else if (!p.ready && now - p.readyZoneSince >= READY_HOLD_MS) this.setReadyState(p, true, now);
+      } else p.readyZoneSince = 0;
+      if (!p.safe) kickers.push({ id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, lastKickAt: p.lastKickAt });
+    }
+
+    const events = stepBall(this.ball, kickers, now, dt);
+    for (const k of kickers) {
+      const p = this.players.get(k.id);
+      if (p) p.lastKickAt = k.lastKickAt;
+    }
+    for (const hit of events.hits) {
+      const p = this.players.get(hit.kicker.id);
+      if (p) {
+        this.mission(p, "ball_hits");
+        p.lastActiveAt = now;
+      }
+      if (now - this.lastHitFxAt > HIT_FX_INTERVAL_MS) {
+        this.lastHitFxAt = now;
+        this.broadcastFx({ kind: "hit", x: Math.round(this.ball.x), y: Math.round(this.ball.y), power: Math.round(hit.power * 100) / 100, byId: hit.kicker.id });
+      }
+    }
+    if (events.goal) {
+      this.score[events.goal] += 1;
+      const by = events.scorer ? this.players.get(events.scorer) : undefined;
+      if (by) this.mission(by, "goal");
+      this.broadcastFx({ kind: "goal", team: events.goal, byName: by?.name ?? null, score: { ...this.score } });
+      this.markDirty();
+    }
+  }
+
+  private tickAfk(now: number) {
+    const lobbyLike = this.scene === "lobby" || this.phase === "ended";
+    for (const p of this.players.values()) {
+      const afk = lobbyLike && p.connected && now - p.lastActiveAt > AFK_LIMIT_MS;
+      if (afk !== p.afk) {
+        p.afk = afk;
+        this.markDirty();
+      }
+      // Muito tempo parado no lobby: vai para a Safe Zone (onde nada o atrapalha).
+      if (this.scene === "lobby" && afk && !p.afkMoved && !p.safe && now - p.lastActiveAt > AFK_SAFE_LIMIT_MS) {
+        p.afkMoved = true;
+        const a = randomInt(360) * (Math.PI / 180);
+        p.x = Math.round(SAFE_ZONE.x + Math.cos(a) * 50);
+        p.y = Math.round(SAFE_ZONE.y + Math.sin(a) * 50);
+        p.lastMoveAt = now;
+        this.updateZones(p);
+        this.sendTo(p, { type: "correct", x: p.x, y: p.y });
+      }
+    }
+  }
+
+  /** Safe Zone e áreas visitadas (só no lobby). */
+  private updateZones(p: Player) {
+    if (this.scene !== "lobby") {
+      if (p.safe) {
+        p.safe = false;
+        this.markDirty();
+      }
+      return;
+    }
+    const safe = inSafeZone(p);
+    if (safe !== p.safe) {
+      p.safe = safe;
+      if (safe) this.mission(p, "enter_safe");
+      this.markDirty();
+    }
+    const area = lobbyAreaAt(p);
+    if (area) this.mission(p, "visit_areas", area);
+  }
+
+  private mission(p: Player, type: Parameters<typeof trackMission>[1], key?: string) {
+    if (this.scene !== "lobby") return;
+    const result = trackMission(p.missions, type, key);
+    if (!result) return;
+    if (result.done) this.sendTo(p, { type: "fx", fx: { kind: "mission", label: result.done.label, reward: result.done.reward } });
+    this.markDirty();
+  }
+
+  private setReadyState(p: Player, ready: boolean, now: number) {
+    if (p.ready === ready) return;
+    p.ready = ready;
+    p.readyAt = now;
+    p.lastActiveAt = now;
+    this.broadcastFx({ kind: "ready", playerId: p.id, ready });
+    this.markDirty();
+  }
+
+  setReady(player: Player, ready: boolean) {
+    if (this.phase !== "lobby" || typeof ready !== "boolean") return;
+    const now = Date.now();
+    if (now - player.readyAt < 300) return;
+    this.setReadyState(player, ready, now);
+  }
+
+  emote(player: Player, emote: EmoteId) {
+    if (!(this.scene === "lobby" || this.phase === "ended")) return;
+    if (!EMOTES.some((e) => e.id === emote)) return;
+    const now = Date.now();
+    if (now - player.emoteAt < EMOTE_COOLDOWN_MS) return;
+    player.emoteAt = now;
+    player.lastActiveAt = now;
+    for (const p of this.players.values()) this.sendTo(p, { type: "emote", playerId: player.id, emote });
+    this.mission(player, "emote");
+  }
+
+  interact(player: Player, objectId: LobbyObjectId) {
+    if (this.scene !== "lobby") return;
+    const obj = LOBBY_OBJECTS.find((o) => o.id === objectId);
+    if (!obj || distance(player, obj.pos) > LOBBY_INTERACT_RANGE + 30) return;
+    const now = Date.now();
+    if (now - player.interactAt < 500) return;
+    player.interactAt = now;
+    player.lastActiveAt = now;
+    if (obj.id === "coffee" || obj.id === "tv") this.broadcastFx({ kind: obj.id, byName: player.name });
+    if (obj.id === "ready" && this.phase === "lobby") this.setReadyState(player, !player.ready, now);
+    this.mission(player, "interact", obj.id);
+  }
+
+  resetBallByHost(player: Player) {
+    if (player.id !== this.hostId || this.scene !== "lobby") return;
+    resetBall(this.ball, Date.now(), 800);
+    this.markDirty();
+  }
+
+  transferHost(player: Player, targetId: string) {
+    if (player.id !== this.hostId || targetId === player.id) return;
+    const target = this.players.get(targetId);
+    if (!target || !target.connected) return;
+    this.hostId = target.id;
+    this.broadcastFx({ kind: "host", name: target.name });
+    this.markDirty();
+  }
+
+  // ---------- Configuração ----------
 
   setColor(player: Player, color: string) {
-    if (this.phase !== "lobby") return;
+    if (this.phase !== "lobby" && this.phase !== "ended") return;
     if (!COLORS.some((c) => c.id === color)) return;
     if (this.playerList.some((p) => p.id !== player.id && p.color === color)) return;
     player.color = color;
+    player.lastActiveAt = Date.now();
     this.markDirty();
   }
 
   updateSettings(player: Player, patch: Partial<Record<keyof Settings, unknown>>) {
     if (player.id !== this.hostId || this.phase !== "lobby") return;
+    const before = this.settings.gameMode;
     const next = sanitizeSettings(this.settings, patch);
     next.maxPlayers = Math.max(next.maxPlayers, this.players.size);
+    // Qualquer ajuste manual (exceto trocar o modo/regras de READY) vira CUSTOM.
+    const manual = Object.keys(patch).some((k) => k !== "gameMode" && k !== "requireAllReady" && k !== "maxPlayers");
+    if (manual) next.preset = "custom";
     this.settings = next;
+    if (next.gameMode !== before) this.broadcastFx({ kind: "mode", mode: next.gameMode });
+    this.markDirty();
+  }
+
+  applyPreset(player: Player, presetId: string) {
+    if (player.id !== this.hostId || this.phase !== "lobby") return;
+    const preset = PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    this.settings = { ...sanitizeSettings(this.settings, preset.values as Partial<Record<keyof Settings, unknown>>), preset: preset.id };
     this.markDirty();
   }
 
@@ -491,51 +792,80 @@ export class Room {
     this.removePlayer(targetId, "kick");
   }
 
-  start(player: Player): string | null {
+  // ---------- Início, contagem e volta ao lobby ----------
+
+  start(player: Player, force = false): string | null {
     if (player.id !== this.hostId) return "Só o host pode iniciar.";
-    if (this.phase !== "lobby") return "A partida já começou.";
+    if (this.phase !== "lobby") return this.phase === "countdown" ? null : "A partida já começou.";
     const players = this.playerList.filter((p) => p.connected);
     if (players.length < MIN_PLAYERS) return `São necessários pelo menos ${MIN_PLAYERS} jogadores.`;
-    // Quem está desconectado no lobby fica de fora da rodada.
-    for (const p of this.playerList) if (!p.connected) this.removePlayer(p.id, "timeout");
-
+    if (!force && this.settings.requireAllReady && players.some((p) => !p.ready)) return "Aguardando todos ficarem READY.";
     const now = Date.now();
-    const count = Math.min(this.settings.infiltrators, maxInfiltratorsFor(players.length));
-    const order = shuffle(players);
-    const firstTurn = now + COUNTDOWN_MS + ROLE_REVEAL_MS;
+    this.phase = "countdown";
+    this.countdownEndsAt = now + COUNTDOWN_MS;
+    this.markDirty();
+    return null;
+  }
 
-    order.forEach((p, i) => {
-      p.role = i < count ? "infiltrator" : "crew";
+  cancelStart(player: Player) {
+    if (player.id !== this.hostId || this.phase !== "countdown") return;
+    this.cancelCountdown("Cancelada pelo host");
+  }
+
+  private cancelCountdown(reason: string) {
+    if (this.phase !== "countdown") return;
+    this.phase = "lobby";
+    this.countdownEndsAt = null;
+    this.broadcastFx({ kind: "cancel", reason });
+    this.markDirty();
+  }
+
+  /** Durante a contagem: sem jogadores suficientes, cancela. */
+  private validateCountdown() {
+    if (this.phase !== "countdown") return;
+    if (this.playerList.filter((p) => p.connected).length < MIN_PLAYERS) this.cancelCountdown("Jogadores insuficientes");
+  }
+
+  /** Fim da contagem: papéis, tarefas e posições no mapa da partida. Acontece uma única vez por rodada. */
+  private beginMatch(now: number) {
+    if (this.phase !== "countdown") return;
+    for (const p of this.playerList) if (!p.connected) this.removePlayer(p.id, "timeout");
+    const players = this.playerList.filter((p) => p.connected);
+    if (players.length < MIN_PLAYERS) {
+      this.cancelCountdown("Jogadores insuficientes");
+      return;
+    }
+    const firstTurn = now + ROLE_REVEAL_MS;
+    for (const p of players) {
       p.alive = true;
       p.deathKnown = false;
       p.roleRevealed = false;
-      p.tasks = shuffle(TASKS)
-        .slice(0, this.settings.tasksPerPlayer)
-        .map((t) => ({ id: t.id, done: false }));
       p.taskStarts.clear();
-      p.emergencyLeft = this.settings.emergencyPerPlayer;
-      p.killReadyAt = firstTurn + KILL_COOLDOWN_START_MS;
-      p.sabotageReadyAt = firstTurn + KILL_COOLDOWN_START_MS;
       p.vote = null;
       p.vent = null;
-    });
-    this.placeAtSpawn();
+      p.safe = false;
+      p.readyZoneSince = 0;
+    }
+    this.rules.assignRoles(this, players, firstTurn);
+    this.rules.setupTimer(this, firstTurn);
 
     this.round += 1;
-    this.phase = "countdown";
-    this.countdownEndsAt = now + COUNTDOWN_MS;
-    this.frozenUntil = now + COUNTDOWN_MS + ROLE_REVEAL_MS;
+    this.phase = "playing";
+    this.countdownEndsAt = null;
+    this.frozenUntil = firstTurn;
+    this.revealUntil = firstTurn;
     this.bodies = [];
     this.meeting = null;
     this.sabotage = emptySabotage();
     this.panelUntil = { servidor: 0, roteador: 0 };
     this.eject = null;
     this.end = null;
+    this.placeAtGameSpawn();
+    this.moveGoat("game");
     this.markDirty();
-    return null;
   }
 
-  private placeAtSpawn() {
+  private placeAtGameSpawn() {
     const list = this.playerList;
     const now = Date.now();
     list.forEach((p, i) => {
@@ -547,30 +877,73 @@ export class Room {
     });
   }
 
-  backToLobby() {
+  private placeAtLobbySpawn() {
+    const now = Date.now();
+    this.playerList.forEach((p, i) => {
+      const s = lobbySpawnPoint(i);
+      p.x = s.x;
+      p.y = s.y;
+      p.lastMoveAt = now;
+      this.sendTo(p, { type: "correct", x: s.x, y: s.y });
+    });
+  }
+
+  /**
+   * Volta todos ao lobby (mesmo código, senha, host, configurações e jogadores).
+   * Limpa tudo que é da partida. Qualquer jogador pode pedir na tela de resultado.
+   */
+  backToLobby(requester?: Player, thenStart = false) {
     if (this.phase !== "ended") return;
+    const now = Date.now();
     this.phase = "lobby";
     this.end = null;
     this.eject = null;
     this.meeting = null;
     this.bodies = [];
+    this.timer = null;
     this.sabotage = emptySabotage();
+    this.panelUntil = { servidor: 0, roteador: 0 };
     for (const p of this.players.values()) {
       p.role = null;
       p.alive = true;
       p.deathKnown = false;
       p.roleRevealed = false;
       p.tasks = [];
+      p.taskStarts.clear();
       p.vote = null;
       p.vent = null;
+      p.releaseAt = 0;
+      p.ready = false;
+      p.readyZoneSince = 0;
+      p.afkMoved = false;
+      p.lastActiveAt = now;
     }
-    this.placeAtSpawn();
+    resetBall(this.ball, now, 800);
+    this.placeAtLobbySpawn();
+    for (const p of this.players.values()) this.updateZones(p);
+    this.moveGoat("lobby");
     this.markDirty();
+    if (thenStart && requester && requester.id === this.hostId) this.start(requester, true);
   }
 
   // ---------- Júlio, a cabra ----------
 
-  private static GOAT_SPOTS: Point[] = [...TASKS.map((t) => t.pos), EMERGENCY_POS, { x: 330, y: 1120 }, { x: 1500, y: 1180 }, { x: 900, y: 640 }];
+  private navFor(scene: "lobby" | "game"): Navigator {
+    return scene === "lobby" ? lobbyNavigator() : gameNavigator();
+  }
+
+  private moveGoat(scene: "lobby" | "game") {
+    const g = this.goat;
+    g.scene = scene;
+    const spots = scene === "lobby" ? LOBBY_GOAT_SPOTS : GAME_GOAT_SPOTS;
+    g.pos = this.navFor(scene).nearestFree(spots[randomInt(spots.length)]);
+    g.route = [];
+    g.restUntil = Date.now() + 2000;
+  }
+
+  private goatSolids() {
+    return this.goat.scene === "lobby" ? LOBBY_SOLIDS : solidsWith(this.closedDoors());
+  }
 
   private tickGoat(now: number) {
     const g = this.goat;
@@ -586,12 +959,12 @@ export class Room {
     }
     if (now < g.restUntil) return;
 
+    const solids = this.goatSolids();
     if (g.route.length === 0) {
-      const spots = Room.GOAT_SPOTS;
+      const spots = g.scene === "lobby" ? LOBBY_GOAT_SPOTS : GAME_GOAT_SPOTS;
       const target = spots[randomInt(spots.length)];
       // Sem "andar de robô": pula pontos que já dá para alcançar em linha reta.
-      const raw = simplify(findPath(g.pos, target));
-      const solids = solidsWith([]);
+      const raw = simplify(this.navFor(g.scene).path(g.pos, target));
       const route: Point[] = [];
       let from = g.pos;
       for (let i = 0; i < raw.length; i++) {
@@ -612,13 +985,13 @@ export class Room {
     const d = Math.hypot(dx, dy);
     const step = GOAT_SPEED * dt;
     if (d <= step + 0.5) {
-      g.pos = moveWithCollision(g.pos, dx, dy, solidsWith(this.closedDoors()));
+      g.pos = moveWithCollision(g.pos, dx, dy, solids);
       g.route.shift();
       // Chegou: pasta um pouco antes de escolher outro lugar.
       if (g.route.length === 0) g.restUntil = now + 2500 + randomInt(5000);
       return;
     }
-    const moved = moveWithCollision(g.pos, (dx / d) * step, (dy / d) * step, solidsWith(this.closedDoors()));
+    const moved = moveWithCollision(g.pos, (dx / d) * step, (dy / d) * step, solids);
     if (distance(moved, g.pos) < step * 0.3) {
       // Porta trancada no caminho: desiste e escolhe outro passeio.
       if (!g.stuckSince) g.stuckSince = now;
@@ -637,11 +1010,13 @@ export class Room {
   /** Fazer carinho no Júlio: ele para, bale e todo mundo ouve. */
   pet(player: Player) {
     const now = Date.now();
-    const lobbyLike = this.phase === "lobby" || this.phase === "ended";
+    const lobbyLike = this.scene === "lobby" || this.phase === "ended";
     if (!lobbyLike && !(this.phase === "playing" && player.alive && !player.vent && now >= this.frozenUntil)) return;
+    if (this.goat.scene !== this.scene) return;
     if (distance(player, this.goat.pos) > PET_RANGE + 25) return;
     if (now - (this.petAt.get(player.id) ?? 0) < PET_COOLDOWN_MS) return;
     this.petAt.set(player.id, now);
+    player.lastActiveAt = now;
     this.goat.restUntil = Math.max(this.goat.restUntil, now + 2500);
     this.broadcastBleat(player);
   }
@@ -659,12 +1034,17 @@ export class Room {
   move(player: Player, x: number, y: number) {
     const now = Date.now();
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    if (!(this.phase === "lobby" || this.phase === "ended" || this.canAct(now))) return;
+    const lobbyLike = this.scene === "lobby" || this.phase === "ended";
+    if (!(lobbyLike || this.canAct(now))) return;
     if (player.vent) return;
+    if (!lobbyLike && now < player.releaseAt) {
+      this.sendTo(player, { type: "correct", x: player.x, y: player.y });
+      return;
+    }
 
     // Tolerante a rajadas de pacotes (rede móvel), mas sem permitir teletransporte.
     const elapsed = Math.min(500, Math.max(33, now - player.lastMoveAt));
-    const maxDist = BASE_SPEED * this.settings.speed * (elapsed / 1000) * 1.5 + 30;
+    const maxDist = BASE_SPEED * this.speedOf(player) * (elapsed / 1000) * 1.5 + 30;
     let dx = x - player.x;
     let dy = y - player.y;
     const dist = Math.hypot(dx, dy);
@@ -675,13 +1055,15 @@ export class Room {
       clamped = true;
     }
 
+    const prevX = player.x;
+    const prevY = player.y;
     const ghost = !player.alive && this.inGame();
     if (ghost) {
       const next = moveGhost(player, dx, dy);
       player.x = next.x;
       player.y = next.y;
     } else {
-      const solids = solidsWith(this.closedDoors());
+      const solids = this.scene === "lobby" ? LOBBY_SOLIDS : solidsWith(this.closedDoors());
       const target = { x: player.x + dx, y: player.y + dy };
       const slid = moveWithCollision(player, dx, dy, solids);
       if (!clamped && !collides(target.x, target.y, solids) && distance(slid, target) < 24) {
@@ -693,15 +1075,23 @@ export class Room {
         clamped = true;
       }
     }
+    // Velocidade real (para a bola) e atividade (AFK).
+    const sec = Math.max(0.033, elapsed / 1000);
+    player.vx = (player.x - prevX) / sec;
+    player.vy = (player.y - prevY) / sec;
+    if (Math.abs(player.x - prevX) + Math.abs(player.y - prevY) > 0.5) {
+      player.lastActiveAt = now;
+      player.afkMoved = false;
+    }
     player.lastMoveAt = now;
+    this.updateZones(player);
     if (clamped) this.sendTo(player, { type: "correct", x: player.x, y: player.y });
   }
 
   // ---------- Ações da partida ----------
 
   private visionOf(p: Player) {
-    if (p.role === "infiltrator") return VISION_INFILTRATOR;
-    return this.sabotage.lights ? VISION_BLACKOUT : VISION_CREW;
+    return this.rules.visionOf(this, p);
   }
 
   kill(killer: Player, targetId: string) {
@@ -710,23 +1100,30 @@ export class Room {
     if (!this.canAct(now) || !target) return;
     if (killer.role !== "infiltrator" || !killer.alive || killer.vent) return;
     if (!target.alive || target.role !== "crew") return;
-    if (now < killer.killReadyAt) return;
+    if (now < killer.killReadyAt || now < killer.releaseAt) return;
     if (distance(killer, target) > KILL_RANGE) return;
 
-    target.alive = false;
-    target.vote = null;
     killer.killReadyAt = now + this.settings.killCooldown * 1000;
-    this.bodies.push({ id: target.id, x: Math.round(target.x), y: Math.round(target.y), color: target.color });
-    // O infiltrado vai até o corpo, como num bote.
-    killer.x = target.x;
-    killer.y = target.y;
-    killer.lastMoveAt = now;
-    this.sendTo(killer, { type: "correct", x: killer.x, y: killer.y });
+    const outcome = this.rules.onKill(this, killer, target, now);
+    if (outcome !== "converted") {
+      target.alive = false;
+      target.vote = null;
+    }
+    if (outcome === "body") {
+      this.bodies.push({ id: target.id, x: Math.round(target.x), y: Math.round(target.y), color: target.color });
+      // O infiltrado vai até o corpo, como num bote.
+      killer.x = target.x;
+      killer.y = target.y;
+      killer.lastMoveAt = now;
+      this.sendTo(killer, { type: "correct", x: killer.x, y: killer.y });
+    }
 
-    // Só fica sabendo da morte quem viu, a vítima, fantasmas e infiltrados.
+    // Clássico: só fica sabendo da morte quem viu, a vítima, fantasmas e infiltrados.
+    // Nos outros modos todo mundo vê.
     const segments = visionSegments(this.closedDoors());
     for (const p of this.players.values()) {
       const witnessed =
+        outcome !== "body" ||
         p.id === target.id ||
         !p.alive ||
         p.role === "infiltrator" ||
@@ -739,6 +1136,7 @@ export class Room {
 
   report(player: Player, bodyId: string) {
     const now = Date.now();
+    if (!modeOf(this.settings).meetings) return;
     if (!this.canAct(now) || !player.alive) return;
     const body = this.bodies.find((b) => b.id === bodyId);
     if (!body || distance(player, body) > REPORT_RANGE) return;
@@ -747,6 +1145,7 @@ export class Room {
 
   emergency(player: Player) {
     const now = Date.now();
+    if (!modeOf(this.settings).meetings) return;
     if (!this.canAct(now) || !player.alive || player.emergencyLeft <= 0) return;
     if (this.sabotage.critical) return;
     if (distance(player, EMERGENCY_POS) > EMERGENCY_RANGE) return;
@@ -877,7 +1276,7 @@ export class Room {
         p.sabotageReadyAt = now + 10_000;
       }
     }
-    this.placeAtSpawn();
+    this.placeAtGameSpawn();
     this.markDirty();
   }
 
@@ -904,11 +1303,12 @@ export class Room {
     player.taskStarts.delete(taskId);
     this.sendTo(player, { type: "taskDone", taskId });
     this.markDirty();
-    if (player.role === "crew") this.checkWin("tasks");
+    this.rules.onTaskComplete(this, player, now);
   }
 
   sabotageAction(player: Player, kind: SabotageKind) {
     const now = Date.now();
+    if (!modeOf(this.settings).sabotage) return;
     if (!this.canAct(now) || player.role !== "infiltrator" || !player.alive) return;
     if (now < player.sabotageReadyAt) return;
     const s = this.sabotage;
@@ -959,6 +1359,7 @@ export class Room {
 
   vent(player: Player, action: "enter" | "exit") {
     const now = Date.now();
+    if (!modeOf(this.settings).vents) return;
     if (!this.canAct(now) || player.role !== "infiltrator" || !player.alive) return;
     if (action === "enter") {
       if (player.vent) return;
@@ -997,7 +1398,7 @@ export class Room {
     if (!text) return;
 
     const allowed =
-      (channel === "lobby" && (this.phase === "lobby" || this.phase === "ended")) ||
+      (channel === "lobby" && (this.scene === "lobby" || this.phase === "ended")) ||
       (channel === "meeting" && this.phase === "meeting" && player.alive) ||
       (channel === "ghost" && this.inGame() && !player.alive);
     if (!allowed) return;
@@ -1006,6 +1407,7 @@ export class Room {
     const last = player.chatTimes[player.chatTimes.length - 1] ?? 0;
     if (now - last < CHAT_MIN_INTERVAL || player.chatTimes.length >= CHAT_BURST) return;
     player.chatTimes.push(now);
+    player.lastActiveAt = now;
 
     const message: ChatMessage = {
       id: ++this.chatSeq,
@@ -1026,24 +1428,16 @@ export class Room {
 
   /** Verifica condições de vitória. Retorna true se a partida acabou. */
   checkWin(context: EndReason): boolean {
-    if (!this.inGame() || this.phase === "countdown") return false;
-    const list = this.playerList;
-    const infiltrators = list.filter((p) => p.role === "infiltrator" && p.alive).length;
-    const crew = list.filter((p) => p.role === "crew" && p.alive).length;
-    const crewPlayers = list.filter((p) => p.role === "crew");
-    const total = crewPlayers.reduce((s, p) => s + p.tasks.length, 0);
-    const done = crewPlayers.reduce((s, p) => s + p.tasks.filter((t) => t.done).length, 0);
-
+    if (!this.inGame()) return false;
     // Durante a reunião/expulsão só a desistência encerra; o resto é avaliado ao voltar.
     if (this.phase === "meeting" && context !== "abandon") return false;
-
-    if (infiltrators === 0) return this.finish("crew", context === "abandon" ? "abandon" : "votes");
-    if (infiltrators >= crew) return this.finish("infiltrator", context === "abandon" ? "abandon" : "kills");
-    if (total > 0 && done >= total) return this.finish("crew", "tasks");
-    return false;
+    const result = this.rules.checkWin(this, context);
+    if (!result) return false;
+    return this.finish(result.winner, result.reason);
   }
 
-  private finish(winner: Role, reason: EndReason) {
+  finish(winner: Role, reason: EndReason) {
+    if (this.phase === "ended") return true;
     const list = this.playerList;
     const crew = list.filter((p) => p.role === "crew");
     this.phase = "ended";
@@ -1053,6 +1447,7 @@ export class Room {
     this.bodies = [];
     this.sabotage = emptySabotage();
     this.end = {
+      mode: this.settings.gameMode,
       winner,
       reason,
       infiltrators: list

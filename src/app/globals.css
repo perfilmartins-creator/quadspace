@@ -177,3 +177,22 @@ html:has([data-crew-game]) body {
   70% { opacity: 1; transform: translateX(10vw) rotate(260deg); filter: none; }
   100% { opacity: 0; transform: translateX(60vw) rotate(540deg); filter: blur(4px); }
 }
+
+/* Painéis do AMOUNG QUAD: bottom sheet (celular) e drawer lateral (desktop). */
+@keyframes crew-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+@keyframes crew-drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+@keyframes crew-flash {
+  0% { opacity: 0; }
+  30% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+@keyframes crew-ready-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}

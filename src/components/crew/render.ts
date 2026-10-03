@@ -37,7 +37,7 @@ export function rgba(hex: string, alpha: number) {
 
 const ACCENT_RED = "#ff4d3d";
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const rr = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
   ctx.moveTo(x + rr, y);
@@ -378,7 +378,7 @@ function text(ctx: CanvasRenderingContext2D, lines: string[], x: number, y: numb
   lines.forEach((line, i) => ctx.fillText(line, x, y + i * size * lh));
 }
 
-function outlined(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, size: number, font: string, fill: string, alpha = 1) {
+export function outlined(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, size: number, font: string, fill: string, alpha = 1) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.font = `700 ${size}px ${font}`;

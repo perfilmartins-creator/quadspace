@@ -185,7 +185,7 @@ async function handleAuth(conn: Connection, msg: ClientMessage) {
     }
     // Revalida depois do await (outro jogador pode ter entrado no meio).
     if (rooms.get(room.code) !== room) return fail(socket, "ROOM_NOT_FOUND");
-    if (room.phase !== "lobby") return fail(socket, "GAME_STARTED");
+    if (room.phase !== "lobby" && room.phase !== "countdown") return fail(socket, "GAME_STARTED");
     if (room.players.size >= room.settings.maxPlayers) return fail(socket, "ROOM_FULL");
     if (room.isNameTaken(name)) return fail(socket, "NAME_TAKEN");
     const player = room.addPlayer(name, socket);
@@ -275,8 +275,30 @@ function handleGame(conn: Connection, msg: ClientMessage) {
     case "pet":
       room.pet(player);
       break;
+    case "ready":
+      room.setReady(player, msg.ready === true);
+      break;
+    case "emote":
+      room.emote(player, msg.emote);
+      break;
+    case "interact":
+      room.interact(player, msg.objectId);
+      break;
+    case "cancelStart":
+      room.cancelStart(player);
+      break;
+    case "resetBall":
+      room.resetBallByHost(player);
+      break;
+    case "transferHost":
+      room.transferHost(player, String(msg.playerId));
+      break;
+    case "preset":
+      room.applyPreset(player, String(msg.preset));
+      break;
     case "backToLobby":
-      if (player.id === room.hostId || !room.players.get(room.hostId)?.connected) room.backToLobby();
+      // Qualquer um pode levar a sala de volta ao lobby; "jogar de novo" (host) já inicia a contagem.
+      room.backToLobby(player, msg.again === true);
       break;
     default:
       return;

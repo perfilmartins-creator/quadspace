@@ -8,7 +8,7 @@ import type { UseTarget } from "./GameScreen";
 import type { CrewClient } from "./net";
 import { btnPrimary, toyButton } from "./ui";
 
-export type OpenTask = Exclude<UseTarget, { kind: "emergency" } | { kind: "goat" }>;
+export type OpenTask = Exclude<UseTarget, { kind: "emergency" } | { kind: "goat" } | { kind: "object" }>;
 
 const MIN_OPEN_MS = 1700;
 

@@ -35,7 +35,10 @@ export const NET_RATE = 20;
 /** Atraso de interpolação dos jogadores remotos (ms). */
 export const INTERP_DELAY = 100;
 
-export const COUNTDOWN_MS = 3000;
+/** Contagem regressiva no lobby antes da partida (jogadores ainda andam). */
+export const COUNTDOWN_MS = 5000;
+/** Host desconectado por mais que isso perde o posto para outro jogador. */
+export const HOST_GRACE_MS = 8000;
 export const ROLE_REVEAL_MS = 3500;
 export const MEETING_INTRO_MS = 2500;
 export const VOTE_RESULT_MS = 4000;
@@ -92,7 +95,29 @@ export type Settings = {
   revealRoleOnEject: boolean;
   anonymousVotes: boolean;
   emergencyPerPlayer: number;
+  /** Modo de jogo escolhido pelo host (ver modes.ts). */
+  gameMode: GameModeId;
+  /** Preset rápido aplicado por último ("custom" depois de qualquer ajuste manual). */
+  preset: PresetId;
+  /** Só deixa iniciar quando todos os conectados estiverem READY. */
+  requireAllReady: boolean;
+  /** Duração da partida nos modos com cronômetro (s). */
+  matchTime: number;
+  /** Segundos que os fugitivos têm para se esconder antes do caçador ser liberado. */
+  hideTime: number;
+  /** Multiplicadores de velocidade por papel nos modos de perseguição. */
+  hunterSpeed: number;
+  runnerSpeed: number;
+  /** Raio de visão por papel nos modos de perseguição. */
+  hunterVision: number;
+  runnerVision: number;
+  /** Segundos que cada tarefa tira do cronômetro (Hide & Seek). */
+  taskTimeBonus: number;
 };
+
+export type GameModeId = "classic" | "hide_seek" | "infection";
+export const GAME_MODE_IDS: GameModeId[] = ["classic", "hide_seek", "infection"];
+export type PresetId = "casual" | "normal" | "rapido" | "caos" | "custom";
 
 export const DEFAULT_SETTINGS: Settings = {
   infiltrators: 1,
@@ -105,14 +130,38 @@ export const DEFAULT_SETTINGS: Settings = {
   revealRoleOnEject: true,
   anonymousVotes: true,
   emergencyPerPlayer: 1,
+  gameMode: "classic",
+  preset: "normal",
+  requireAllReady: false,
+  matchTime: 150,
+  hideTime: 10,
+  hunterSpeed: 1.1,
+  runnerSpeed: 1,
+  hunterVision: 300,
+  runnerVision: 360,
+  taskTimeBonus: 3,
 };
 
 type NumericLimits = { min: number; max: number; step: number };
 
-export const SETTING_LIMITS: Record<
-  "infiltrators" | "maxPlayers" | "speed" | "killCooldown" | "tasksPerPlayer" | "discussionTime" | "votingTime" | "emergencyPerPlayer",
-  NumericLimits
-> = {
+export type NumericSettingKey =
+  | "infiltrators"
+  | "maxPlayers"
+  | "speed"
+  | "killCooldown"
+  | "tasksPerPlayer"
+  | "discussionTime"
+  | "votingTime"
+  | "emergencyPerPlayer"
+  | "matchTime"
+  | "hideTime"
+  | "hunterSpeed"
+  | "runnerSpeed"
+  | "hunterVision"
+  | "runnerVision"
+  | "taskTimeBonus";
+
+export const SETTING_LIMITS: Record<NumericSettingKey, NumericLimits> = {
   infiltrators: { min: 1, max: 2, step: 1 },
   maxPlayers: { min: MIN_PLAYERS, max: MAX_PLAYERS_LIMIT, step: 1 },
   speed: { min: 0.75, max: 1.5, step: 0.25 },
@@ -121,6 +170,13 @@ export const SETTING_LIMITS: Record<
   discussionTime: { min: 0, max: 60, step: 5 },
   votingTime: { min: 15, max: 120, step: 5 },
   emergencyPerPlayer: { min: 0, max: 3, step: 1 },
+  matchTime: { min: 60, max: 300, step: 15 },
+  hideTime: { min: 5, max: 20, step: 1 },
+  hunterSpeed: { min: 0.75, max: 1.5, step: 0.05 },
+  runnerSpeed: { min: 0.75, max: 1.5, step: 0.05 },
+  hunterVision: { min: 160, max: 520, step: 20 },
+  runnerVision: { min: 160, max: 520, step: 20 },
+  taskTimeBonus: { min: 0, max: 10, step: 1 },
 };
 
 /** Infiltrados recomendados (e máximo permitido) para o número de jogadores. */
@@ -138,9 +194,10 @@ export function sanitizeSettings(current: Settings, patch: Partial<Record<keyof 
     const snapped = Math.round((value - min) / step) * step + min;
     next[key] = Math.min(max, Math.max(min, Number(snapped.toFixed(2))));
   }
-  for (const key of ["revealRoleOnEject", "anonymousVotes"] as const) {
+  for (const key of ["revealRoleOnEject", "anonymousVotes", "requireAllReady"] as const) {
     if (typeof patch[key] === "boolean") next[key] = patch[key];
   }
+  if (typeof patch.gameMode === "string" && (GAME_MODE_IDS as string[]).includes(patch.gameMode)) next.gameMode = patch.gameMode as GameModeId;
   return next;
 }
 

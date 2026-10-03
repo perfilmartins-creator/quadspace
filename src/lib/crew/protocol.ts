@@ -1,8 +1,10 @@
 // Protocolo de rede do QUAD CREW (JSON sobre WebSocket).
 // O servidor é autoritativo: o cliente só envia intenções.
 
-import type { Settings } from "./constants";
+import type { GameModeId, PresetId, Settings } from "./constants";
+import type { EmoteId, LobbyObjectId } from "./lobby";
 import type { DoorId, PanelId, RoomId, TaskId, VentId } from "./map";
+import type { ObjectiveProgress } from "./missions";
 
 export type Phase = "lobby" | "countdown" | "playing" | "meeting" | "ejecting" | "ended";
 export type Role = "crew" | "infiltrator";
@@ -19,6 +21,12 @@ export type PublicPlayer = {
   alive: boolean;
   /** Papel revelado: só após expulsão com revelação, para parceiros infiltrados ou no fim. */
   role?: Role;
+  /** Lobby: marcou READY. */
+  ready: boolean;
+  /** Parado há muito tempo. */
+  afk: boolean;
+  /** Dentro da SAFE ZONE do lobby (calculado no servidor). */
+  safe: boolean;
 };
 
 export type Body = { id: string; x: number; y: number; color: string };
@@ -60,9 +68,10 @@ export type EjectState = {
   remaining?: number;
 };
 
-export type EndReason = "tasks" | "votes" | "kills" | "sabotage" | "abandon";
+export type EndReason = "tasks" | "votes" | "kills" | "sabotage" | "abandon" | "time" | "caught" | "infected";
 
 export type EndState = {
+  mode: GameModeId;
   winner: Role;
   reason: EndReason;
   infiltrators: { id: string; name: string; color: string }[];
@@ -85,6 +94,30 @@ export type YouState = {
   vote: VoteTarget | null;
   /** Duto em que o infiltrado está escondido. */
   vent: VentId | null;
+  /** Multiplicador de velocidade efetivo (modo + papel). */
+  speed: number;
+  /** Raio de visão efetivo (null = regra do modo clássico). */
+  vision: number | null;
+  /** Até quando este jogador está preso (ex.: caçador antes de ser liberado). */
+  releaseAt: number;
+  /** Missão atual do lobby (null quando todas foram concluídas). */
+  mission: ObjectiveProgress | null;
+  missionsDone: number;
+  /** XP de lobby (só visual). */
+  xp: number;
+};
+
+export type LobbyView = {
+  score: { red: number; blue: number };
+  /** Bola parada depois de um gol até este instante. */
+  ballFrozenUntil: number;
+};
+
+export type TimerView = {
+  /** Fim da partida nos modos com cronômetro. */
+  endsAt: number;
+  /** Quando o caçador é liberado (Hide & Seek). */
+  releaseAt: number | null;
 };
 
 export type RoomState = {
@@ -107,6 +140,8 @@ export type RoomState = {
   end: EndState | null;
   /** Número da rodada (muda a cada partida; útil para resetar a UI). */
   round: number;
+  lobby: LobbyView;
+  timer: TimerView | null;
   you: YouState;
 };
 
@@ -142,11 +177,29 @@ export type ClientMessage =
   | { type: "sabotage"; kind: SabotageKind }
   | { type: "fixLights" }
   | { type: "panel"; panelId: PanelId }
-  | { type: "backToLobby" }
+  | { type: "backToLobby"; again?: boolean }
   | { type: "vent"; action: "enter" | "exit" }
   | { type: "ventMove"; ventId: VentId }
   | { type: "pet" }
+  | { type: "ready"; ready: boolean }
+  | { type: "emote"; emote: EmoteId }
+  | { type: "interact"; objectId: LobbyObjectId }
+  | { type: "cancelStart" }
+  | { type: "resetBall" }
+  | { type: "transferHost"; playerId: string }
+  | { type: "preset"; preset: Exclude<PresetId, "custom"> }
   | { type: "ping"; c: number };
+
+export type LobbyFx =
+  | { kind: "hit"; x: number; y: number; power: number; byId: string }
+  | { kind: "goal"; team: "red" | "blue"; byName: string | null; score: { red: number; blue: number } }
+  | { kind: "mission"; label: string; reward: number }
+  | { kind: "ready"; playerId: string; ready: boolean }
+  | { kind: "mode"; mode: GameModeId }
+  | { kind: "host"; name: string }
+  | { kind: "cancel"; reason: string }
+  | { kind: "joined"; name: string }
+  | { kind: "coffee" | "tv"; byName: string };
 
 // ---------- Servidor → cliente ----------
 
@@ -175,6 +228,8 @@ export type ServerMessage =
   | { type: "taskDone"; taskId: TaskId }
   | { type: "kicked" }
   | { type: "pong"; c: number; s: number }
+  | { type: "emote"; playerId: string; emote: EmoteId }
+  | { type: "fx"; fx: LobbyFx }
   /** O Júlio baliu (sozinho ou porque alguém fez carinho). */
   | { type: "bleat"; byId: string | null; byName: string | null };
 
