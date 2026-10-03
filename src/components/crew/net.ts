@@ -106,6 +106,8 @@ export class CrewClient {
   private snapOffset: number | null = null;
   localReady = false;
   kills: KillFx[] = [];
+  /** Último balido do Júlio (performance.now()). */
+  bleat: { at: number; byId: string | null; byName: string | null } | null = null;
   private lastSent = { x: 0, y: 0, at: 0 };
 
   // ---------- Store ----------
@@ -355,6 +357,9 @@ export class CrewClient {
         if (!this.snapshot.chat.some((m) => m.id === msg.message.id)) {
           this.update({ chat: [...this.snapshot.chat.slice(-60), msg.message] });
         }
+        break;
+      case "bleat":
+        this.bleat = { at: performance.now(), byId: msg.byId, byName: msg.byName };
         break;
       case "killed":
         this.kills.push({ victimId: msg.victimId, x: msg.x, y: msg.y, at: performance.now() });

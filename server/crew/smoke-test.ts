@@ -105,7 +105,7 @@ async function testBruteForce() {
   const [host] = await makeRoom(["Host"]);
   const attacker = new Bot("Atk");
   await attacker.connect();
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 20; i++) {
     attacker.send({ type: "join", code: host.code, password: `tentativa${i}`, name: "Atk" });
     await sleep(60);
   }
@@ -178,7 +178,7 @@ async function testFullGameAndPrivacy() {
   // Fantasma não aparece para vivos.
   await sleep(300);
   check(!crew[1].snapIds.has(victim.playerId), "vivos não recebem posição do fantasma");
-  check(victim.snapIds.size === all.length, "fantasma vê todos");
+  check([...victim.snapIds].filter((id) => !id.startsWith("@")).length === all.length, "fantasma vê todos");
 
   // Chat de fantasma só para mortos.
   victim.send({ type: "chat", channel: "ghost", text: "sou um fantasma" });

@@ -11,6 +11,9 @@ import {
   VISION_CREW,
   VISION_INFILTRATOR,
   VENT_RANGE,
+  GOAT_ID,
+  GOAT_NAME,
+  PET_RANGE,
   colorHex,
 } from "@/lib/crew/constants";
 import { CRITICAL_PANELS, EMERGENCY_POS, LIGHTS_PANEL, MAP_HEIGHT, MAP_WIDTH, TASKS, VENTS, distance, type Point, type TaskId, type VentId } from "@/lib/crew/map";
@@ -19,14 +22,15 @@ import type { RoomState } from "@/lib/crew/protocol";
 import { sfx, unlockAudio, vibrate } from "./feedback";
 import { Hud } from "./Hud";
 import type { CrewClient, Snapshot } from "./net";
-import { buildMapCache, drawBody, drawCeiling, drawCharacter, drawFog, drawKillFx, drawMapDynamic } from "./render";
+import { buildMapCache, drawBody, drawBubble, drawCeiling, drawCharacter, drawFog, drawGoat, drawKillFx, drawMapDynamic } from "./render";
 import { TaskModal, type OpenTask } from "./Tasks";
 
 export type UseTarget =
   | { kind: "task"; taskId: TaskId }
   | { kind: "emergency" }
   | { kind: "lights" }
-  | { kind: "panel"; panelId: "servidor" | "roteador" };
+  | { kind: "panel"; panelId: "servidor" | "roteador" }
+  | { kind: "goat" };
 
 export type Near = { use: UseTarget | null; killId: string | null; bodyId: string | null; ventId: VentId | null };
 
@@ -95,6 +99,8 @@ export function GameScreen({ client, snapshot }: Props) {
     let moving = false;
     let lastNear = EMPTY_NEAR;
     let seenKills = 0;
+    let seenBleat = 0;
+    const goatAnim = { facing: 1, walk: 0, lastX: 0 };
     const remoteAnim = new Map<string, { facing: number; walk: number; lastX: number }>();
 
     const resize = () => {
@@ -165,6 +171,14 @@ export function GameScreen({ client, snapshot }: Props) {
         if (pos) remote.set(p.id, pos);
       }
 
+      // Júlio, a cabra (posição interpolada como a de um jogador).
+      const goat = client.remotePosition(GOAT_ID);
+      if (goat) {
+        if (Math.abs(goat.x - goatAnim.lastX) > 0.2) goatAnim.facing = goat.x > goatAnim.lastX ? 1 : -1;
+        goatAnim.lastX = goat.x;
+        if (goat.moving) goatAnim.walk += dt * 11;
+      }
+
       // Interações próximas ----------------------------------------
       let use: UseTarget | null = null;
       let killId: string | null = null;
@@ -211,6 +225,9 @@ export function GameScreen({ client, snapshot }: Props) {
             }
           }
         }
+      }
+      if (!use && goat && state.phase === "playing" && serverNow >= state.frozenUntil && you.alive && !you.vent && distance(me, goat) < PET_RANGE) {
+        use = { kind: "goat" };
       }
       let ventId: VentId | null = null;
       if (state.phase === "playing" && serverNow >= state.frozenUntil && you.alive && you.role === "infiltrator" && !you.vent) {
@@ -287,8 +304,12 @@ export function GameScreen({ client, snapshot }: Props) {
         if (visible(b)) drawBody(ctx, b.x, b.y, colorHex(b.color), nowPerf);
       }
 
-      type Drawn = { id: string; x: number; y: number; color: string; name: string; ghost: boolean; local: boolean; moving: boolean; facing: number; walk: number; red: boolean };
+      type Drawn = { id: string; x: number; y: number; color: string; name: string; ghost: boolean; local: boolean; moving: boolean; facing: number; walk: number; red: boolean; goat?: boolean };
       const drawn: Drawn[] = [];
+      const goatSeen = !!goat && visible(goat);
+      if (goat && goatSeen) {
+        drawn.push({ id: GOAT_ID, x: goat.x, y: goat.y, color: "white", name: GOAT_NAME, ghost: false, local: false, moving: goat.moving, facing: goatAnim.facing, walk: goatAnim.walk, red: false, goat: true });
+      }
       for (const p of state.players) {
         const isMe = p.id === you.id;
         if (isMe) {
@@ -326,6 +347,10 @@ export function GameScreen({ client, snapshot }: Props) {
       }
       drawn.sort((a, b) => a.y - b.y);
       for (const d of drawn) {
+        if (d.goat) {
+          drawGoat(ctx, d.x, d.y + 14, { facing: d.facing, walk: d.walk, moving: d.moving, time: nowPerf });
+          continue;
+        }
         drawCharacter(ctx, d.x, d.y + 14, colorHex(d.color), {
           facing: d.facing,
           walk: d.walk,
@@ -348,8 +373,24 @@ export function GameScreen({ client, snapshot }: Props) {
         const label = d.name;
         ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.fillText(label, d.x + 1, d.y - 42 + 1);
-        ctx.fillStyle = d.red ? "#ff6a5c" : d.ghost ? "rgba(255,255,255,0.55)" : "#ffffff";
+        ctx.fillStyle = d.goat ? "#ffd23d" : d.red ? "#ff6a5c" : d.ghost ? "rgba(255,255,255,0.55)" : "#ffffff";
         ctx.fillText(label, d.x, d.y - 42);
+      }
+
+      // Balido do Júlio: balão + som (mais baixo quanto mais longe).
+      const bleat = client.bleat;
+      if (bleat && goat) {
+        if (bleat.at > seenBleat) {
+          seenBleat = bleat.at;
+          const mine = bleat.byId === you.id;
+          const volume = mine ? 1 : goatSeen ? Math.max(0, 1 - distance(me, goat) / 700) : 0;
+          if (volume > 0.08) sfx.bleat(volume);
+          if (mine) vibrate(25);
+        }
+        const age = nowPerf - bleat.at;
+        if (goatSeen && age < 1800) {
+          drawBubble(ctx, goat.x, goat.y - 60 - Math.min(1, age / 150) * 6, bleat.byId ? "Méééé! ♥" : "Méééé!", font, age > 1400 ? (1800 - age) / 400 : 1);
+        }
       }
 
       // Névoa (campo de visão limitado)
@@ -448,6 +489,10 @@ export function GameScreen({ client, snapshot }: Props) {
     if (!target) return;
     if (target.kind === "emergency") {
       client.send({ type: "emergency" });
+      return;
+    }
+    if (target.kind === "goat") {
+      client.send({ type: "pet" });
       return;
     }
     if (target.kind === "task") client.send({ type: "taskStart", taskId: target.taskId });

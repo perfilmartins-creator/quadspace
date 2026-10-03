@@ -177,3 +177,13 @@ export function normalizeRoomCode(raw: unknown): string | null {
   if (code.length !== ROOM_CODE_LENGTH) return null;
   return code;
 }
+
+// ---------- Júlio, a cabra da QUAD ----------
+
+/** Id do Júlio nos pacotes de posição (jogadores nunca têm "@" no id). */
+export const GOAT_ID = "@julio";
+export const GOAT_NAME = "Júlio";
+/** Mais devagar que os jogadores: dá para alcançar e fazer carinho. */
+export const GOAT_SPEED = 95;
+export const PET_RANGE = 85;
+export const PET_COOLDOWN_MS = 2500;

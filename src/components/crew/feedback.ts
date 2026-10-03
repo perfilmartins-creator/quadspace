@@ -94,7 +94,41 @@ function noise(duration: number, from = 1800, to = 200, volume = 0.5) {
   src.start(now);
 }
 
+/** "Méééé" do Júlio: serra nasalada com vibrato rápido. */
+function bleatSound(volume: number) {
+  if (!enabled || !ctx || ctx.state !== "running") return;
+  const now = ctx.currentTime;
+  const master = ctx.createGain();
+  master.gain.value = 0.16 * volume;
+  const filter = ctx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = 1300;
+  filter.Q.value = 1.2;
+  filter.connect(master).connect(ctx.destination);
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(330, now);
+  osc.frequency.linearRampToValueAtTime(380, now + 0.12);
+  osc.frequency.linearRampToValueAtTime(300, now + 0.75);
+  const lfo = ctx.createOscillator();
+  const depth = ctx.createGain();
+  lfo.frequency.value = 18;
+  depth.gain.value = 28;
+  lfo.connect(depth).connect(osc.frequency);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(1, now + 0.04);
+  gain.gain.setValueAtTime(1, now + 0.55);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+  osc.connect(gain).connect(filter);
+  osc.start(now);
+  lfo.start(now);
+  osc.stop(now + 0.85);
+  lfo.stop(now + 0.85);
+}
+
 export const sfx = {
+  bleat: (volume = 1) => bleatSound(volume),
   join: () => play([{ f: 660, t: 0, d: 0.12 }, { f: 990, t: 0.08, d: 0.16 }]),
   leave: () => play([{ f: 660, t: 0, d: 0.12 }, { f: 440, t: 0.08, d: 0.16 }]),
   tap: () => play([{ f: 1200, t: 0, d: 0.05, v: 0.4 }]),

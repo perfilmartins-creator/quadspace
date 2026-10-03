@@ -1,69 +1,16 @@
 // Cliente bot para testes do servidor do QUAD CREW (anda pelo mapa com BFS).
 
 import WebSocket from "ws";
-import { BASE_SPEED, PLAYER_HALF } from "../../src/lib/crew/constants";
-import { MAP_HEIGHT, MAP_WIDTH, type Point } from "../../src/lib/crew/map";
-import { collides, solidsWith } from "../../src/lib/crew/physics";
+import { BASE_SPEED } from "../../src/lib/crew/constants";
+import type { Point } from "../../src/lib/crew/map";
 import type { ChatMessage, ClientMessage, RoomState, ServerMessage } from "../../src/lib/crew/protocol";
 
 export const URL = process.env.CREW_URL ?? "ws://localhost:3031";
 const ORIGIN = "http://localhost:3000";
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// ---------- Navegação em grade (BFS) para andar legalmente pelo mapa ----------
-
-const CELL = 20;
-const GW = Math.floor(MAP_WIDTH / CELL);
-const GH = Math.floor(MAP_HEIGHT / CELL);
-const solids = solidsWith([]);
-const free: boolean[] = [];
-for (let gy = 0; gy < GH; gy++)
-  for (let gx = 0; gx < GW; gx++) free.push(!collides(gx * CELL + CELL / 2, gy * CELL + CELL / 2, solids, PLAYER_HALF + 2));
-
-export function path(from: Point, to: Point): Point[] {
-  const cell = (p: Point) => [Math.floor(p.x / CELL), Math.floor(p.y / CELL)] as const;
-  const [sx, sy] = cell(from);
-  const nearestFree = (gx: number, gy: number) => {
-    let best = gy * GW + gx;
-    let bestD = Infinity;
-    for (let y = gy - 4; y <= gy + 4; y++)
-      for (let x = gx - 4; x <= gx + 4; x++) {
-        if (x < 0 || y < 0 || x >= GW || y >= GH || !free[y * GW + x]) continue;
-        const d = (x - gx) ** 2 + (y - gy) ** 2;
-        if (d < bestD) {
-          bestD = d;
-          best = y * GW + x;
-        }
-      }
-    return best;
-  };
-  const start = nearestFree(sx, sy);
-  const [tx, ty] = cell(to);
-  const goal = nearestFree(tx, ty);
-  const prev = new Int32Array(GW * GH).fill(-1);
-  prev[start] = start;
-  const queue = [start];
-  for (let qi = 0; qi < queue.length; qi++) {
-    const c = queue[qi];
-    if (c === goal) break;
-    const x = c % GW;
-    const y = Math.floor(c / GW);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx;
-      const ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
-      const n = ny * GW + nx;
-      if (!free[n] || prev[n] !== -1) continue;
-      prev[n] = c;
-      queue.push(n);
-    }
-  }
-  const out: Point[] = [];
-  for (let c = goal; c !== start && prev[c] !== -1; c = prev[c]) out.push({ x: (c % GW) * CELL + CELL / 2, y: Math.floor(c / GW) * CELL + CELL / 2 });
-  out.reverse();
-  out.push(to);
-  return out;
-}
+import { path } from "../../src/lib/crew/pathfind";
+export { path };
 
 // ---------- Cliente bot ----------
 

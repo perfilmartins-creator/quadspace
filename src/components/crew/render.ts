@@ -861,3 +861,171 @@ export function drawFog(
   fog.fill();
   fog.restore();
 }
+
+// ---------- Júlio, a cabra ----------
+
+/** Cabra cartoon vista de lado. (x, y) = ponto dos pés. */
+export function drawGoat(ctx: CanvasRenderingContext2D, x: number, y: number, o: { facing: number; walk: number; moving: boolean; time: number }) {
+  const OUT = "#16172a";
+  const swing = o.moving ? Math.sin(o.walk) * 4 : 0;
+  const bob = o.moving ? Math.abs(Math.sin(o.walk)) * 1.5 : 0;
+  // Parado, abaixa a cabeça para "pastar" de vez em quando.
+  const graze = o.moving ? 0 : Math.max(0, Math.sin(o.time * 0.0016)) * 9;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.fillStyle = "rgba(10,10,25,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 24, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.scale(o.facing >= 0 ? 1 : -1, 1);
+  ctx.translate(0, -bob);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = OUT;
+  ctx.lineWidth = 3;
+
+  // Pernas (as de trás mais escuras)
+  const leg = (lx: number, phase: number, back: boolean) => {
+    const off = swing * phase;
+    ctx.fillStyle = back ? "#cfc6b6" : "#ebe5d8";
+    roundRect(ctx, lx - 3 + off, -16, 7, 15, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#3b3330";
+    roundRect(ctx, lx - 3 + off, -4, 7, 5, 2);
+    ctx.fill();
+  };
+  leg(-12, -1, true);
+  leg(10, 1, true);
+  leg(-6, 1, false);
+  leg(15, -1, false);
+
+  // Rabinho
+  ctx.fillStyle = "#f3efe6";
+  ctx.beginPath();
+  ctx.moveTo(-20, -30);
+  ctx.quadraticCurveTo(-30, -42 + swing * 0.4, -24, -40);
+  ctx.quadraticCurveTo(-21, -36, -17, -33);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Corpo
+  ctx.fillStyle = "#f3efe6";
+  ctx.beginPath();
+  ctx.ellipse(0, -26, 23, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Mancha marrom e sombra da barriga
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0, -26, 21.5, 12.5, 0, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = "#c9a27a";
+  ctx.beginPath();
+  ctx.ellipse(-8, -32, 9, 6, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(22,23,42,0.12)";
+  ctx.fillRect(-24, -20, 48, 10);
+  ctx.restore();
+
+  // Cabeça (desce quando pasta)
+  ctx.save();
+  ctx.translate(18, -36 + graze);
+  ctx.rotate(graze * 0.04);
+  // Pescoço
+  ctx.fillStyle = "#f3efe6";
+  ctx.beginPath();
+  ctx.moveTo(-10, 2);
+  ctx.lineTo(-2, -6);
+  ctx.lineTo(6, 2);
+  ctx.lineTo(-2, 14 - graze * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  // Chifres
+  ctx.strokeStyle = OUT;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.quadraticCurveTo(-6, -22, -14, -18);
+  ctx.stroke();
+  ctx.strokeStyle = "#c79a62";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.strokeStyle = OUT;
+  ctx.lineWidth = 3;
+  // Orelha
+  ctx.fillStyle = "#e2d9c8";
+  ctx.beginPath();
+  ctx.ellipse(-7, -4, 7, 3.5, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Cabeça
+  ctx.fillStyle = "#f3efe6";
+  ctx.beginPath();
+  ctx.ellipse(4, -2, 11, 9, 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Focinho
+  ctx.fillStyle = "#f7c9c4";
+  ctx.beginPath();
+  ctx.ellipse(12, 3, 4.5, 3.5, 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = OUT;
+  ctx.beginPath();
+  ctx.arc(14, 2, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  // Barbicha
+  ctx.fillStyle = "#d9d2c3";
+  ctx.beginPath();
+  ctx.moveTo(6, 7);
+  ctx.lineTo(9, 7);
+  ctx.lineTo(6, 16);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Olho
+  ctx.fillStyle = OUT;
+  ctx.beginPath();
+  ctx.arc(6, -5, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(6.8, -5.8, 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+/** Balão de fala cartoon acima de (x, y). */
+export function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, label: string, font: string, alpha = 1) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = `700 15px ${font}`;
+  const w = ctx.measureText(label).width + 20;
+  const h = 26;
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#16172a";
+  ctx.lineWidth = 3;
+  ctx.lineJoin = "round";
+  roundRect(ctx, x - w / 2, y - h - 8, w, h, 12);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x - 6, y - 9.5);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x + 6, y - 9.5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x - 6.5, y - 12, 13, 3);
+  ctx.fillStyle = "#16172a";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, x, y - h / 2 - 8 + 1);
+  ctx.restore();
+}

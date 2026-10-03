@@ -171,6 +171,13 @@ const RULES: { title: string; body: string[] }[] = [
     body: ["Todos conversam no chat e votam em quem expulsar. Pode pular o voto. Quem tiver mais votos sai da nave… quer dizer, do estúdio."],
   },
   {
+    title: "Júlio, a cabra",
+    body: [
+      "O Júlio mora na QUAD e passeia sozinho pelo estúdio. Ele aparece no mapa e bale de vez em quando.",
+      "Chegue perto e toque em CARINHO para ele parar e dar um “Méééé!”. Ele não tem lado: não ajuda nem atrapalha ninguém… ou será que sim?",
+    ],
+  },
+  {
     title: "Controles",
     body: [
       "Celular: arraste o polegar na metade esquerda para andar; botões grandes à direita.",

@@ -145,6 +145,7 @@ export type ClientMessage =
   | { type: "backToLobby" }
   | { type: "vent"; action: "enter" | "exit" }
   | { type: "ventMove"; ventId: VentId }
+  | { type: "pet" }
   | { type: "ping"; c: number };
 
 // ---------- Servidor → cliente ----------
@@ -173,7 +174,9 @@ export type ServerMessage =
   | { type: "notice"; text: string }
   | { type: "taskDone"; taskId: TaskId }
   | { type: "kicked" }
-  | { type: "pong"; c: number; s: number };
+  | { type: "pong"; c: number; s: number }
+  /** O Júlio baliu (sozinho ou porque alguém fez carinho). */
+  | { type: "bleat"; byId: string | null; byName: string | null };
 
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   ROOM_NOT_FOUND: "Sala não encontrada.",

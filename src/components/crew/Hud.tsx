@@ -349,7 +349,9 @@ function ActionButtons({ client, snapshot, near, now, onUse }: { client: CrewCli
         ? "REUNIÃO"
         : near.use.kind === "lights"
           ? "LUZ"
-          : "PAINEL"
+          : near.use.kind === "goat"
+            ? "CARINHO"
+            : "PAINEL"
     : "USAR";
 
   const kill = () => {

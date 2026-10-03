@@ -31,6 +31,10 @@ import {
   sanitizeChat,
   sanitizeSettings,
   type Settings,
+  GOAT_ID,
+  GOAT_SPEED,
+  PET_COOLDOWN_MS,
+  PET_RANGE,
 } from "../../src/lib/crew/constants";
 import {
   CRITICAL_PANELS,
@@ -49,7 +53,8 @@ import {
   type Point,
   type TaskId,
 } from "../../src/lib/crew/map";
-import { canSee, collides, moveGhost, moveWithCollision, solidsWith, visionSegments } from "../../src/lib/crew/physics";
+import { nearestFreePoint, path as findPath, simplify } from "../../src/lib/crew/pathfind";
+import { canSee, collides, moveGhost, moveWithCollision, pathClear, solidsWith, visionSegments } from "../../src/lib/crew/physics";
 import type {
   Body,
   ChatChannel,
@@ -153,6 +158,17 @@ export class Room {
 
   private dirty = true;
   private chatSeq = 0;
+
+  /** Júlio, a cabra da QUAD: passeia pelo estúdio, bale e aceita carinho. Não interfere nas regras. */
+  goat = {
+    pos: nearestFreePoint({ x: 330, y: 1120 }),
+    route: [] as Point[],
+    restUntil: 0,
+    nextBleatAt: 0,
+    stuckSince: 0,
+    lastTick: 0,
+  };
+  private petAt = new Map<string, number>();
 
   constructor(code: string, passwordHash: string) {
     this.code = code;
@@ -389,6 +405,7 @@ export class Room {
         if (q.vent && q.id !== viewer.id) continue;
         p.push([q.id, Math.round(q.x), Math.round(q.y), ghost ? 1 : 0]);
       }
+      p.push([GOAT_ID, Math.round(this.goat.pos.x), Math.round(this.goat.pos.y), 0]);
       this.sendTo(viewer, { type: "snap", t: now, p });
     }
   }
@@ -419,6 +436,7 @@ export class Room {
 
     if (this.phase === "ended" && now - this.endedAt > ENDED_AUTO_LOBBY_MS) this.backToLobby();
 
+    this.tickGoat(now);
     this.sendSnapshots(now);
     this.flush();
   }
@@ -548,6 +566,84 @@ export class Room {
     }
     this.placeAtSpawn();
     this.markDirty();
+  }
+
+  // ---------- Júlio, a cabra ----------
+
+  private static GOAT_SPOTS: Point[] = [...TASKS.map((t) => t.pos), EMERGENCY_POS, { x: 330, y: 1120 }, { x: 1500, y: 1180 }, { x: 900, y: 640 }];
+
+  private tickGoat(now: number) {
+    const g = this.goat;
+    const dt = g.lastTick ? Math.min(0.2, (now - g.lastTick) / 1000) : 0;
+    g.lastTick = now;
+    if (g.nextBleatAt === 0) g.nextBleatAt = now + 15_000 + randomInt(20_000);
+    // Na reunião todo mundo (inclusive o Júlio) fica parado.
+    if (this.phase === "meeting" || this.phase === "ejecting") return;
+
+    if (now >= g.nextBleatAt) {
+      g.nextBleatAt = now + 25_000 + randomInt(25_000);
+      this.broadcastBleat(null);
+    }
+    if (now < g.restUntil) return;
+
+    if (g.route.length === 0) {
+      const spots = Room.GOAT_SPOTS;
+      const target = spots[randomInt(spots.length)];
+      // Sem "andar de robô": pula pontos que já dá para alcançar em linha reta.
+      const raw = simplify(findPath(g.pos, target));
+      const solids = solidsWith([]);
+      const route: Point[] = [];
+      let from = g.pos;
+      for (let i = 0; i < raw.length; i++) {
+        let j = i;
+        while (j + 1 < raw.length && pathClear(from, raw[j + 1], solids)) j++;
+        route.push(raw[j]);
+        from = raw[j];
+        i = j;
+      }
+      g.route = route;
+      g.stuckSince = 0;
+      return;
+    }
+
+    const next = g.route[0];
+    const dx = next.x - g.pos.x;
+    const dy = next.y - g.pos.y;
+    const d = Math.hypot(dx, dy);
+    const step = GOAT_SPEED * dt;
+    if (d <= step + 0.5) {
+      g.pos = moveWithCollision(g.pos, dx, dy, solidsWith(this.closedDoors()));
+      g.route.shift();
+      // Chegou: pasta um pouco antes de escolher outro lugar.
+      if (g.route.length === 0) g.restUntil = now + 2500 + randomInt(5000);
+      return;
+    }
+    const moved = moveWithCollision(g.pos, (dx / d) * step, (dy / d) * step, solidsWith(this.closedDoors()));
+    if (distance(moved, g.pos) < step * 0.3) {
+      // Porta trancada no caminho: desiste e escolhe outro passeio.
+      if (!g.stuckSince) g.stuckSince = now;
+      else if (now - g.stuckSince > 1500) {
+        g.route = [];
+        g.restUntil = now + 1000;
+      }
+    } else g.stuckSince = 0;
+    g.pos = moved;
+  }
+
+  private broadcastBleat(by: Player | null) {
+    for (const p of this.players.values()) this.sendTo(p, { type: "bleat", byId: by?.id ?? null, byName: by?.name ?? null });
+  }
+
+  /** Fazer carinho no Júlio: ele para, bale e todo mundo ouve. */
+  pet(player: Player) {
+    const now = Date.now();
+    const lobbyLike = this.phase === "lobby" || this.phase === "ended";
+    if (!lobbyLike && !(this.phase === "playing" && player.alive && !player.vent && now >= this.frozenUntil)) return;
+    if (distance(player, this.goat.pos) > PET_RANGE + 25) return;
+    if (now - (this.petAt.get(player.id) ?? 0) < PET_COOLDOWN_MS) return;
+    this.petAt.set(player.id, now);
+    this.goat.restUntil = Math.max(this.goat.restUntil, now + 2500);
+    this.broadcastBleat(player);
   }
 
   // ---------- Movimento ----------

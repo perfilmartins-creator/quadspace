@@ -272,6 +272,9 @@ function handleGame(conn: Connection, msg: ClientMessage) {
     case "ventMove":
       room.ventMove(player, msg.ventId);
       break;
+    case "pet":
+      room.pet(player);
+      break;
     case "backToLobby":
       if (player.id === room.hostId || !room.players.get(room.hostId)?.connected) room.backToLobby();
       break;
