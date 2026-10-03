@@ -7,8 +7,10 @@ import { useState } from "react";
 import { NAME_MAX, PASSWORD_MAX, PASSWORD_MIN, normalizeRoomCode, sanitizeName } from "@/lib/crew/constants";
 import { crew } from "@/lib/content";
 import { CREW_AVAILABLE } from "@/lib/crew/server-url";
+import { CharacterIcon } from "./CharacterIcon";
 import { unlockAudio } from "./feedback";
 import type { CrewClient, Snapshot } from "./net";
+import { btnBlue, btnGhost, btnPrimary, card, input } from "./ui";
 
 type View = "menu" | "create" | "join";
 
@@ -30,11 +32,8 @@ function rememberName(name: string) {
   }
 }
 
-const input =
-  "w-full border border-paper/20 bg-transparent px-4 py-3.5 text-base text-paper outline-none transition-colors placeholder:text-paper/25 focus:border-paper select-text";
-const labelCls = "block pb-1.5 text-[10px] tracking-[0.3em] text-paper/50";
-const primary =
-  "w-full border border-paper bg-paper py-4 text-sm tracking-[0.3em] text-ink transition-colors hover:bg-ink hover:text-paper disabled:border-paper/20 disabled:bg-transparent disabled:text-paper/40";
+const labelCls = "block pb-1.5 text-sm font-semibold text-white/75";
+const PARADE = ["red", "blue", "yellow", "green", "pink", "cyan"];
 
 /** Lê ?sala=CODE (link/QR compartilhado) — precisa estar dentro de <Suspense>. */
 export function HomeWithParams(props: { client: CrewClient; snapshot: Snapshot }) {
@@ -45,47 +44,168 @@ export function HomeWithParams(props: { client: CrewClient; snapshot: Snapshot }
 
 export function Home({ client, snapshot, initialCode }: { client: CrewClient; snapshot: Snapshot; initialCode: string | null }) {
   const [view, setView] = useState<View>(initialCode ? "join" : "menu");
+  const [code, setCode] = useState(initialCode ?? "");
   const busy = snapshot.status === "connecting";
 
   return (
-    <div className="absolute inset-0 overflow-y-auto">
-      <div className="mx-auto flex min-h-full w-full max-w-sm flex-col px-6 pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-        <button type="button" onClick={() => setView("menu")} className="flex flex-col items-center text-center animate-[crew-rise_0.7s_cubic-bezier(0.16,1,0.3,1)_both]">
+    <div className="crew-stars absolute inset-0 overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+2rem)]">
+        <button
+          type="button"
+          onClick={() => setView("menu")}
+          className="flex flex-col items-center text-center animate-[crew-rise_0.7s_cubic-bezier(0.16,1,0.3,1)_both]"
+        >
           <Image src="/brand/estrelas-branco.png" alt="" width={62} height={18} priority />
-          <span className="mt-4 pl-[0.5em] text-[10px] tracking-[0.5em] text-paper/50">{crew.name}</span>
-          <span className="mt-3 pl-[0.55em] text-xs tracking-[0.55em]">QUAD</span>
-          <span className="text-[clamp(4rem,24vw,6.5rem)] leading-[0.9] font-light tracking-tightest">CREW</span>
+          <span className="crew-outline mt-3 text-[clamp(2.8rem,15vw,4.2rem)] leading-[0.95] font-bold text-[#ffd23d]">AMOUNG</span>
+          <span className="crew-outline text-[clamp(2.8rem,15vw,4.2rem)] leading-[0.95] font-bold text-white">QUAD</span>
+          <span className="mt-4 flex items-end justify-center gap-1">
+            {PARADE.map((c, i) => (
+              <span key={c} className="inline-block animate-[crew-float_2.4s_ease-in-out_infinite]" style={{ animationDelay: `${i * 0.18}s` }}>
+                <CharacterIcon color={c} size={i === 2 || i === 3 ? 52 : 42} />
+              </span>
+            ))}
+          </span>
         </button>
 
         {!CREW_AVAILABLE && (
-          <div className="mt-auto flex flex-col items-center gap-4 pt-12 text-center">
-            <p className="text-xs tracking-[0.45em] text-paper/60">EM BREVE</p>
-            <p className="text-sm text-paper/55">{crew.tagline}</p>
-            <Link href="/game" className="pt-4 text-xs text-paper/40 hover:text-paper">
+          <div className={`${card} mt-8 flex flex-col items-center gap-3 p-6 text-center`}>
+            <p className="text-lg font-bold text-[#ffd23d]">Em breve</p>
+            <p className="text-sm text-white/70">{crew.tagline}</p>
+            <Link href="/game" className="pt-2 text-sm font-semibold text-white/50 hover:text-white">
               ← QUAD BOUNCE
             </Link>
           </div>
         )}
 
         {CREW_AVAILABLE && view === "menu" && (
-          <div className="mt-auto flex flex-col gap-3 pt-12 animate-[crew-rise_0.7s_cubic-bezier(0.16,1,0.3,1)_0.1s_both]">
-            <p className="pb-4 text-center text-sm text-paper/55">{crew.tagline}</p>
-            <button type="button" onClick={() => setView("join")} className={primary}>
-              ENTRAR EM UMA SALA
-            </button>
-            <button type="button" onClick={() => setView("create")} className="w-full border border-paper/40 py-4 text-sm tracking-[0.3em] transition-colors hover:border-paper">
-              CRIAR SALA
-            </button>
-            <Link href="/game" className="pt-4 text-center text-xs text-paper/40 hover:text-paper">
+          <div className="mt-8 flex flex-col gap-4 animate-[crew-rise_0.6s_cubic-bezier(0.16,1,0.3,1)_0.08s_both]">
+            <div className={`${card} p-5`}>
+              <p className="pb-4 text-center text-[15px] text-white/80">{crew.tagline}</p>
+              <button type="button" onClick={() => setView("create")} className={`${btnPrimary} w-full py-4 text-xl`}>
+                ✦ Criar sala
+              </button>
+              <div className="my-4 flex items-center gap-3 text-sm font-semibold text-white/50">
+                <span className="h-[3px] flex-1 rounded-full bg-[#16172a]" />
+                ou entre com o código
+                <span className="h-[3px] flex-1 rounded-full bg-[#16172a]" />
+              </div>
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  unlockAudio();
+                  setView("join");
+                }}
+              >
+                <input
+                  className={`${input} min-w-0 flex-1 text-center text-2xl font-bold tracking-[0.4em] uppercase`}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4))}
+                  aria-label="Código da sala"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="ABCD"
+                />
+                <button type="submit" className={`${btnBlue} px-5 text-lg`}>
+                  Entrar
+                </button>
+              </form>
+            </div>
+
+            <HowToPlay />
+
+            <Link href="/game" className="pt-1 text-center text-sm font-semibold text-white/45 hover:text-white">
               ← QUAD BOUNCE
             </Link>
           </div>
         )}
 
         {CREW_AVAILABLE && view !== "menu" && (
-          <RoomForm key={view} client={client} snapshot={snapshot} mode={view} initialCode={initialCode} busy={busy} onBack={() => setView("menu")} />
+          <RoomForm
+            key={view}
+            client={client}
+            snapshot={snapshot}
+            mode={view}
+            initialCode={code}
+            busy={busy}
+            onBack={() => {
+              client.clearError();
+              setView("menu");
+            }}
+          />
         )}
       </div>
+    </div>
+  );
+}
+
+const RULES: { title: string; body: string[] }[] = [
+  {
+    title: "O objetivo",
+    body: [
+      "Tripulantes: completem todas as tarefas da QUAD ou descubram e expulsem os infiltrados.",
+      "Infiltrados: eliminem tripulantes sem serem descobertos até empatar o número.",
+    ],
+  },
+  {
+    title: "Tripulante",
+    body: [
+      "Siga a lista de Missões no canto da tela; o mapa mostra onde cada uma está.",
+      "Achou um corpo? Toque em REPORTAR. Suspeitou de alguém? Aperte o botão de reunião na Recepção.",
+      "Se morrer, vira fantasma: ainda pode terminar suas tarefas e conversar com outros fantasmas.",
+    ],
+  },
+  {
+    title: "Infiltrado",
+    body: [
+      "ELIMINAR quem estiver perto (tem tempo de recarga). Finja fazer tarefas para não levantar suspeita.",
+      "SABOTAR apaga as luzes, tranca portas ou derruba o sistema — esse último a equipe precisa consertar a tempo.",
+      "Use os DUTOS para sumir de uma sala e aparecer em outra.",
+    ],
+  },
+  {
+    title: "Reunião",
+    body: ["Todos conversam no chat e votam em quem expulsar. Pode pular o voto. Quem tiver mais votos sai da nave… quer dizer, do estúdio."],
+  },
+  {
+    title: "Controles",
+    body: [
+      "Celular: arraste o polegar na metade esquerda para andar; botões grandes à direita.",
+      "Computador: WASD/setas para andar · E ou Espaço usar · R reportar · Q eliminar · F sabotar · V duto · M mapa.",
+    ],
+  },
+];
+
+function HowToPlay() {
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <div className={`${card} overflow-hidden`}>
+      <p className="px-5 pt-4 pb-2 text-lg font-bold text-white">Como jogar</p>
+      <ul className="px-3 pb-3">
+        {RULES.map((r, i) => (
+          <li key={r.title} className="border-t-2 border-[#16172a]/60 first:border-t-0">
+            <button
+              type="button"
+              onClick={() => setOpen(open === i ? null : i)}
+              aria-expanded={open === i}
+              className="flex w-full items-center justify-between px-2 py-3 text-left text-[15px] font-semibold text-[#ffd23d]"
+            >
+              {r.title}
+              <span className={`text-white/60 transition-transform ${open === i ? "rotate-90" : ""}`}>▸</span>
+            </button>
+            {open === i && (
+              <div className="space-y-2 px-2 pb-3 text-sm leading-relaxed text-white/80 animate-[crew-fade_0.15s_ease-out_both]">
+                {r.body.map((b) => (
+                  <p key={b}>{b}</p>
+                ))}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -101,12 +221,12 @@ function RoomForm({
   client: CrewClient;
   snapshot: Snapshot;
   mode: "create" | "join";
-  initialCode: string | null;
+  initialCode: string;
   busy: boolean;
   onBack: () => void;
 }) {
   const [name, setName] = useState(savedName);
-  const [code, setCode] = useState(initialCode ?? "");
+  const [code, setCode] = useState(initialCode);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -135,15 +255,15 @@ function RoomForm({
 
   return (
     <form
-      className="mt-auto flex flex-col gap-4 pt-10 animate-[crew-rise_0.4s_ease-out_both]"
+      className={`${card} mt-8 flex flex-col gap-4 p-5 animate-[crew-rise_0.4s_ease-out_both]`}
       onSubmit={(e) => {
         e.preventDefault();
         submit();
       }}
     >
-      <p className="text-center text-xs tracking-[0.4em] text-paper/60">{mode === "create" ? "CRIAR SALA" : "ENTRAR EM UMA SALA"}</p>
+      <p className="text-center text-xl font-bold text-white">{mode === "create" ? "Criar sala" : "Entrar na sala"}</p>
       <label>
-        <span className={labelCls}>SEU NOME</span>
+        <span className={labelCls}>Seu nome</span>
         <input
           className={input}
           value={name}
@@ -160,9 +280,9 @@ function RoomForm({
       </label>
       {mode === "join" && (
         <label>
-          <span className={labelCls}>CÓDIGO DA SALA</span>
+          <span className={labelCls}>Código da sala</span>
           <input
-            className={`${input} text-center text-2xl tracking-[0.5em] uppercase`}
+            className={`${input} text-center text-2xl font-bold tracking-[0.4em] uppercase`}
             value={code}
             onChange={(e) => {
               setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4));
@@ -173,12 +293,12 @@ function RoomForm({
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
-            placeholder="Q7XP"
+            placeholder="ABCD"
           />
         </label>
       )}
       <label>
-        <span className={labelCls}>{mode === "create" ? "DEFINA UMA SENHA" : "SENHA DA SALA"}</span>
+        <span className={labelCls}>{mode === "create" ? "Defina uma senha" : "Senha da sala"}</span>
         <span className="relative block">
           <input
             className={`${input} pr-20`}
@@ -197,25 +317,25 @@ function RoomForm({
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute top-1/2 right-3 -translate-y-1/2 text-[10px] tracking-[0.2em] text-paper/50"
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-semibold text-white/55"
           >
-            {showPassword ? "OCULTAR" : "MOSTRAR"}
+            {showPassword ? "ocultar" : "mostrar"}
           </button>
         </span>
       </label>
 
       {error && (
-        <p role="alert" className="border border-[#ff4d3d]/50 bg-[#ff4d3d]/10 px-3 py-2.5 text-sm text-[#ffb3ab]">
+        <p role="alert" className="rounded-xl border-[3px] border-[#16172a] bg-[#ff4d5e] px-3 py-2.5 text-sm font-semibold text-white">
           {error}
         </p>
       )}
 
-      <button type="submit" disabled={busy} className={primary}>
-        {busy ? "CONECTANDO…" : mode === "create" ? "CRIAR SALA" : "ENTRAR"}
+      <button type="submit" disabled={busy} className={`${btnPrimary} w-full py-4 text-xl`}>
+        {busy ? "Conectando…" : mode === "create" ? "Criar sala" : "Entrar"}
       </button>
-      {busy && <p className="-mt-2 text-center text-xs text-paper/40">O primeiro acesso pode levar alguns segundos.</p>}
-      <button type="button" onClick={onBack} className="py-2 text-xs tracking-[0.3em] text-paper/45">
-        VOLTAR
+      {busy && <p className="-mt-2 text-center text-xs text-white/50">O primeiro acesso pode levar alguns segundos.</p>}
+      <button type="button" onClick={onBack} className={`${btnGhost} w-full py-2.5 text-base`}>
+        Voltar
       </button>
     </form>
   );

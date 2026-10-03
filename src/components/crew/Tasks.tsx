@@ -6,6 +6,7 @@ import type { RoomState } from "@/lib/crew/protocol";
 import { sfx, vibrate } from "./feedback";
 import type { UseTarget } from "./GameScreen";
 import type { CrewClient } from "./net";
+import { btnPrimary, toyButton } from "./ui";
 
 export type OpenTask = Exclude<UseTarget, { kind: "emergency" }>;
 
@@ -62,19 +63,19 @@ export function TaskModal({ client, state, task, onClose }: { client: CrewClient
   }
 
   return (
-    <div className="absolute inset-0 z-30 flex items-end justify-center bg-ink/70 backdrop-blur-[2px] animate-[crew-fade_0.15s_ease-out_both] sm:items-center">
-      <div className="w-full max-w-md border-t border-paper/15 bg-[#0b0b0b] pb-[calc(env(safe-area-inset-bottom)+1rem)] animate-[crew-rise_0.25s_cubic-bezier(0.16,1,0.3,1)_both] sm:border">
+    <div className="absolute inset-0 z-30 flex items-end justify-center bg-[#0f1022]/70 backdrop-blur-[2px] animate-[crew-fade_0.15s_ease-out_both] sm:items-center">
+      <div className="w-full max-w-md rounded-t-3xl border-[3px] border-[#16172a] bg-[#262a45] pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[0_6px_0_#16172a] animate-[crew-rise_0.25s_cubic-bezier(0.16,1,0.3,1)_both] sm:rounded-3xl">
         <header className="flex items-center justify-between px-4 py-3">
-          <p className="text-xs tracking-[0.3em] text-paper/70">{title.toUpperCase()}</p>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="-mr-2 px-3 py-1 text-lg text-paper/60">
+          <p className="text-lg font-bold text-[#ffd23d]">{title}</p>
+          <button type="button" onClick={onClose} aria-label="Fechar" className={`${toyButton} h-9 w-9 bg-[#ff4d5e] text-base text-white`}>
             ✕
           </button>
         </header>
         <div className="relative px-4">
           {body}
           {done && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0b0b0b]/85 animate-[crew-fade_0.2s_ease-out_both]">
-              <p className="text-lg tracking-[0.35em] text-[#2ed47a] animate-[crew-pop_0.4s_cubic-bezier(0.16,1,0.3,1)_both]">CONCLUÍDO</p>
+            <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-[#262a45]/90 animate-[crew-fade_0.2s_ease-out_both]">
+              <p className="crew-outline text-4xl font-bold text-[#3ddc84] animate-[crew-pop_0.4s_cubic-bezier(0.16,1,0.3,1)_both]">Concluído!</p>
             </div>
           )}
         </div>
@@ -109,10 +110,10 @@ function TaskGame({ id, onDone }: { id: TaskId; onDone: () => void }) {
 }
 
 const sliderClass =
-  "h-10 w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-paper/15 [&::-webkit-slider-thumb]:mt-[-11px] [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-paper [&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:w-7 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-paper [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:bg-paper/15";
+  "h-10 w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-[#15172b] [&::-webkit-slider-thumb]:mt-[-10px] [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-[#16172a] [&::-webkit-slider-thumb]:bg-[#ffd23d] [&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:w-7 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-[#16172a] [&::-moz-range-thumb]:bg-[#ffd23d] [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:bg-[#15172b]";
 
 function Hint({ children }: { children: ReactNode }) {
-  return <p className="pb-3 text-sm text-paper/55">{children}</p>;
+  return <p className="pb-3 text-sm text-white/70">{children}</p>;
 }
 
 /** AJUSTAR LUZ: leve cada slider até a marca. */
@@ -127,7 +128,7 @@ function SliderMatch({ onDone, labels }: { onDone: () => void; labels: string[] 
   return (
     <div>
       <Hint>Ajuste cada controle até a marca amarela.</Hint>
-      <div className="mb-3 flex h-20 items-center justify-center bg-ink">
+      <div className="mb-3 flex h-20 items-center justify-center rounded-xl bg-[#15172b]">
         <div
           className="h-14 w-14 rounded-full transition-all"
           style={{
@@ -215,9 +216,9 @@ function Export({ onDone }: { onDone: () => void }) {
         type="button"
         disabled={progress !== null}
         onClick={() => setProgress(0)}
-        className="w-full border border-paper bg-paper py-3 text-xs tracking-[0.3em] text-ink disabled:border-paper/20 disabled:bg-transparent disabled:text-paper/50"
+        className={`${btnPrimary} w-full py-3 text-base`}
       >
-        {progress === null ? "EXPORTAR" : "EXPORTANDO…"}
+        {progress === null ? "Exportar" : "Exportando…"}
       </button>
     </div>
   );
@@ -371,10 +372,10 @@ function Cards({ onDone }: { onDone: () => void }) {
       </div>
       <p className="pb-2 text-center text-[11px] tracking-[0.2em] text-paper/45">{Math.min(index, cards.length)} / {cards.length}</p>
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={() => pick("gravado")} className="border border-[#ffd23d]/60 py-3 text-xs tracking-[0.25em] text-[#ffd23d]">
+        <button type="button" onClick={() => pick("gravado")} className={`${btnPrimary} py-3 text-base`}>
           BACKUP
         </button>
-        <button type="button" onClick={() => pick("vazio")} className="border border-paper/30 py-3 text-xs tracking-[0.25em]">
+        <button type="button" onClick={() => pick("vazio")} className={`${toyButton} bg-[#3a3f66] py-3 text-base text-white`}>
           FORMATAR
         </button>
       </div>

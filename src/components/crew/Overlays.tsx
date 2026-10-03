@@ -5,8 +5,9 @@ import { colorHex } from "@/lib/crew/constants";
 import { CharacterIcon } from "./CharacterIcon";
 import { sfx, vibrate } from "./feedback";
 import type { CrewClient, Snapshot } from "./net";
+import { btnGhost, btnPrimary, card } from "./ui";
 
-const RED = "#ff4d3d";
+const RED = "#ff4d5e";
 
 export function Overlays({ client, snapshot, now }: { client: CrewClient; snapshot: Snapshot; now: number }) {
   const state = snapshot.state!;
@@ -23,15 +24,15 @@ export function Overlays({ client, snapshot, now }: { client: CrewClient; snapsh
 
       {snapshot.status === "reconnecting" && (
         <div className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-50 flex justify-center">
-          <p className="animate-[crew-pulse_1s_ease-in-out_infinite] border border-[#ffd23d]/60 bg-ink/90 px-4 py-2 text-[11px] tracking-[0.3em] text-[#ffd23d]">
-            RECONECTANDO…
+          <p className="animate-[crew-pulse_1s_ease-in-out_infinite] rounded-2xl border-[3px] border-[#16172a] bg-[#ffd23d] px-4 py-2 text-sm font-bold text-[#16172a] shadow-[0_4px_0_#16172a]">
+            Reconectando…
           </p>
         </div>
       )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] z-40 flex flex-col items-center gap-1.5">
         {snapshot.notices.map((n) => (
-          <p key={n.id} className="animate-[crew-rise_0.25s_ease-out_both] bg-ink/80 px-3 py-1.5 text-xs text-paper/85 backdrop-blur">
+          <p key={n.id} className="animate-[crew-rise_0.25s_ease-out_both] rounded-xl border-[3px] border-[#16172a] bg-[#262a45] px-3 py-1.5 text-sm font-semibold text-white shadow-[0_3px_0_#16172a]">
             {n.text}
           </p>
         ))}
@@ -82,9 +83,9 @@ function Countdown({ endsAt, now }: { endsAt: number; now: number }) {
     vibrate(20);
   }, [n]);
   return (
-    <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-ink/85 animate-[crew-fade_0.2s_ease-out_both]">
-      <p className="text-xs tracking-[0.5em] text-paper/50">A PARTIDA COMEÇA EM</p>
-      <p key={n} className="mt-4 text-[9rem] leading-none font-light animate-[crew-pop_0.5s_cubic-bezier(0.16,1,0.3,1)_both]">
+    <div className="crew-stars absolute inset-0 z-40 flex flex-col items-center justify-center animate-[crew-fade_0.2s_ease-out_both]">
+      <p className="text-lg font-semibold text-white/70">A partida começa em</p>
+      <p key={n} className="crew-outline mt-4 text-[9rem] leading-none font-bold text-[#ffd23d] animate-[crew-pop_0.5s_cubic-bezier(0.16,1,0.3,1)_both]">
         {n}
       </p>
     </div>
@@ -100,18 +101,18 @@ function RoleReveal({ snapshot }: { snapshot: Snapshot }) {
     <div
       className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center animate-[crew-fade_0.35s_ease-out_both]"
       style={{
-        background: `radial-gradient(circle at 50% 45%, ${infiltrator ? "rgba(255,77,61,0.3)" : "rgba(255,255,255,0.12)"}, transparent 65%), #050505`,
+        background: `radial-gradient(circle at 50% 45%, ${infiltrator ? "rgba(255,77,94,0.45)" : "rgba(79,182,255,0.35)"}, transparent 65%), #0f1022`,
       }}
     >
-      <p className="text-xs tracking-[0.5em] text-paper/50">SEU PAPEL</p>
+      <p className="text-lg font-semibold text-white/70">Você é</p>
       <p
-        className="mt-3 text-6xl font-light tracking-[0.12em] animate-[crew-pop_0.6s_cubic-bezier(0.16,1,0.3,1)_both] sm:text-7xl"
-        style={{ color: infiltrator ? RED : "#fff" }}
+        className="crew-outline mt-2 text-6xl font-bold animate-[crew-pop_0.6s_cubic-bezier(0.16,1,0.3,1)_both] sm:text-7xl"
+        style={{ color: infiltrator ? RED : "#4fb6ff" }}
       >
-        {infiltrator ? "INFILTRADO" : "CREW"}
+        {infiltrator ? "INFILTRADO" : "TRIPULANTE"}
       </p>
       <div className="mt-6 animate-[crew-rise_0.6s_ease-out_0.2s_both]">{me && <CharacterIcon color={me.color} size={110} />}</div>
-      <p className="mt-6 text-base text-paper/80">
+      <p className="mt-6 text-lg font-semibold text-white/90">
         {infiltrator ? (
           <>
             Elimine a equipe.
@@ -127,11 +128,11 @@ function RoleReveal({ snapshot }: { snapshot: Snapshot }) {
         )}
       </p>
       {infiltrator && partners.length > 0 && (
-        <p className="mt-4 text-sm text-[#ff8a7e]">Seu parceiro: {partners.map((p) => p.name).join(", ")}</p>
+        <p className="mt-4 text-base font-semibold text-[#ff8a95]">Seu parceiro: {partners.map((p) => p.name).join(", ")}</p>
       )}
       {!infiltrator && (
-        <p className="mt-4 text-xs tracking-[0.2em] text-paper/40">
-          {state.settings.infiltrators > 1 && state.players.length >= 7 ? "2 INFILTRADOS ENTRE VOCÊS" : "1 INFILTRADO ENTRE VOCÊS"}
+        <p className="mt-4 rounded-xl border-[3px] border-[#16172a] bg-[#ff4d5e] px-3 py-1 text-sm font-bold text-white">
+          {state.settings.infiltrators > 1 && state.players.length >= 7 ? "2 infiltrados entre vocês" : "1 infiltrado entre vocês"}
         </p>
       )}
     </div>
@@ -140,12 +141,12 @@ function RoleReveal({ snapshot }: { snapshot: Snapshot }) {
 
 function DeathScreen({ color }: { color: string }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#050505]/95 px-6 text-center animate-[crew-fade_0.15s_ease-out_both]">
+    <div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#0f1022]/95 px-6 text-center animate-[crew-fade_0.15s_ease-out_both]">
       <div className="animate-[crew-glitch_0.5s_steps(2)_3]">
         <CharacterIcon color={color} size={110} dead />
       </div>
-      <p className="mt-6 text-xl font-light tracking-[0.18em] text-[#ff8a7e] animate-[crew-glitch_0.4s_steps(2)_2]">VOCÊ FOI ELIMINADO</p>
-      <p className="mt-3 text-sm text-paper/60">Agora você é um fantasma. Continue ajudando com as tarefas.</p>
+      <p className="crew-outline mt-6 text-4xl font-bold text-[#ff4d5e] animate-[crew-glitch_0.4s_steps(2)_2]">Você foi eliminado!</p>
+      <p className="mt-3 text-base text-white/70">Agora você é um fantasma. Continue ajudando com as tarefas.</p>
     </div>
   );
 }
@@ -168,7 +169,7 @@ function Eject({ snapshot }: { snapshot: Snapshot }) {
         ? null
         : `${e.remaining} ${e.remaining === 1 ? "infiltrado restante" : "infiltrados restantes"}.`;
   return (
-    <div className="absolute inset-0 z-40 flex flex-col items-center justify-center overflow-hidden bg-[#030303] px-6 text-center">
+    <div className="crew-stars absolute inset-0 z-40 flex flex-col items-center justify-center overflow-hidden px-6 text-center">
       {/* Feixe de luz de estúdio */}
       <div className="absolute inset-y-0 left-1/2 w-40 -translate-x-1/2 bg-gradient-to-b from-paper/10 via-paper/[0.03] to-transparent" />
       {e.color && (
@@ -176,14 +177,14 @@ function Eject({ snapshot }: { snapshot: Snapshot }) {
           <CharacterIcon color={e.color} size={120} />
         </div>
       )}
-      <p className="relative mt-8 text-2xl font-light tracking-tight animate-[crew-rise_0.6s_ease-out_0.6s_both]">{line1}</p>
+      <p className="crew-outline relative mt-8 text-3xl font-bold text-white animate-[crew-rise_0.6s_ease-out_0.6s_both]">{line1}</p>
       <p
-        className="relative mt-2 text-base animate-[crew-rise_0.6s_ease-out_1.6s_both]"
-        style={{ color: e.role === "infiltrator" ? RED : "rgba(255,255,255,0.7)" }}
+        className="relative mt-3 text-lg font-semibold animate-[crew-rise_0.6s_ease-out_1.6s_both]"
+        style={{ color: e.role === "infiltrator" ? RED : "rgba(255,255,255,0.8)" }}
       >
         {line2}
       </p>
-      {line3 && <p className="relative mt-4 text-sm tracking-[0.15em] text-paper/50 animate-[crew-rise_0.6s_ease-out_2.4s_both]">{line3}</p>}
+      {line3 && <p className="relative mt-4 text-base font-semibold text-[#ffd23d] animate-[crew-rise_0.6s_ease-out_2.4s_both]">{line3}</p>}
     </div>
   );
 }
@@ -204,38 +205,38 @@ function Results({ client, snapshot }: { client: CrewClient; snapshot: Snapshot 
   const isHost = state.hostId === state.you.id;
   const hostOnline = state.players.find((p) => p.id === state.hostId)?.connected;
   return (
-    <div className="absolute inset-0 z-40 flex flex-col items-center justify-center overflow-y-auto bg-[#040404]/95 px-6 py-[calc(env(safe-area-inset-top)+2rem)] text-center animate-[crew-fade_0.4s_ease-out_both]">
-      <p className="text-xs tracking-[0.5em] text-paper/50">{youWon ? "VITÓRIA" : "DERROTA"}</p>
+    <div className="absolute inset-0 z-40 flex flex-col items-center justify-center overflow-y-auto crew-stars px-6 py-[calc(env(safe-area-inset-top)+2rem)] text-center animate-[crew-fade_0.4s_ease-out_both]">
+      <p className={`text-2xl font-bold ${youWon ? "text-[#3ddc84]" : "text-[#ff8a95]"}`}>{youWon ? "Vitória!" : "Derrota"}</p>
       <p
-        className="mt-3 text-5xl font-light tracking-[0.08em] animate-[crew-pop_0.7s_cubic-bezier(0.16,1,0.3,1)_both] sm:text-6xl"
-        style={{ color: crewWon ? "#fff" : RED }}
+        className="crew-outline mt-3 text-5xl font-bold animate-[crew-pop_0.7s_cubic-bezier(0.16,1,0.3,1)_both] sm:text-6xl"
+        style={{ color: crewWon ? "#4fb6ff" : RED }}
       >
-        {crewWon ? "CREW VENCEU" : "INFILTRADO VENCEU"}
+        {crewWon ? "TRIPULANTES VENCEM" : "INFILTRADOS VENCEM"}
       </p>
-      <p className="mt-3 text-sm text-paper/55">{REASONS[end.reason]}</p>
+      <p className="mt-4 text-base text-white/70">{REASONS[end.reason]}</p>
 
       <div className="mt-8 flex flex-wrap justify-center gap-4">
         {end.infiltrators.map((p) => (
           <div key={p.id} className="flex flex-col items-center">
             <CharacterIcon color={p.color} size={72} />
-            <p className="mt-1 text-sm" style={{ color: colorHex(p.color) }}>
+            <p className="mt-1 text-sm font-semibold" style={{ color: colorHex(p.color) }}>
               {p.name}
             </p>
           </div>
         ))}
       </div>
-      <p className="mt-1 text-[10px] tracking-[0.3em] text-[#ff8a7e]">{end.infiltrators.length > 1 ? "INFILTRADOS" : "INFILTRADO"}</p>
+      <p className="mt-1 text-sm font-bold text-[#ff8a95]">{end.infiltrators.length > 1 ? "INFILTRADOS" : "INFILTRADO"}</p>
 
-      <dl className="mt-8 grid w-full max-w-xs grid-cols-2 gap-px border border-paper/10 bg-paper/10 text-left">
-        <div className="bg-ink px-4 py-3">
-          <dt className="text-[10px] tracking-[0.25em] text-paper/45">ELIMINADOS</dt>
-          <dd className="text-2xl font-light">{end.eliminated}</dd>
+      <dl className={`${card} mt-8 grid w-full max-w-xs grid-cols-2 overflow-hidden text-left`}>
+        <div className="border-r-[3px] border-[#16172a] px-4 py-3">
+          <dt className="text-xs font-semibold text-white/55">Eliminados</dt>
+          <dd className="text-3xl font-bold">{end.eliminated}</dd>
         </div>
-        <div className="bg-ink px-4 py-3">
-          <dt className="text-[10px] tracking-[0.25em] text-paper/45">TAREFAS</dt>
-          <dd className="text-2xl font-light">
+        <div className="px-4 py-3">
+          <dt className="text-xs font-semibold text-white/55">Tarefas</dt>
+          <dd className="text-3xl font-bold">
             {end.tasksDone}
-            <span className="text-sm text-paper/40">/{end.tasksTotal}</span>
+            <span className="text-base text-white/45">/{end.tasksTotal}</span>
           </dd>
         </div>
       </dl>
@@ -245,15 +246,15 @@ function Results({ client, snapshot }: { client: CrewClient; snapshot: Snapshot 
           <button
             type="button"
             onClick={() => client.send({ type: "backToLobby" })}
-            className="border border-paper bg-paper py-4 text-sm tracking-[0.3em] text-ink"
+            className={`${btnPrimary} py-4 text-xl`}
           >
-            JOGAR NOVAMENTE
+            Jogar novamente
           </button>
         ) : (
-          <p className="border border-paper/15 py-4 text-[11px] tracking-[0.25em] text-paper/55">AGUARDANDO O HOST · REMATCH</p>
+          <p className="py-3 text-base font-semibold text-white/65">Aguardando o host para a revanche…</p>
         )}
-        <button type="button" onClick={() => client.leave()} className="border border-paper/20 py-3 text-xs tracking-[0.3em] text-paper/70">
-          SAIR DA SALA
+        <button type="button" onClick={() => client.leave()} className={`${btnGhost} py-3 text-base`}>
+          Sair da sala
         </button>
       </div>
     </div>

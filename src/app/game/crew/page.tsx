@@ -1,7 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Fredoka } from "next/font/google";
 import { CrewApp } from "@/components/crew/CrewApp";
 import { site } from "@/config/site";
 import { crew } from "@/lib/content";
+
+// Fonte arredondada e encorpada, no clima cartoon do jogo.
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  variable: "--font-crew",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: { absolute: crew.name },
@@ -44,5 +52,9 @@ export const viewport: Viewport = {
 };
 
 export default function CrewPage() {
-  return <CrewApp />;
+  return (
+    <div className={fredoka.variable}>
+      <CrewApp />
+    </div>
+  );
 }

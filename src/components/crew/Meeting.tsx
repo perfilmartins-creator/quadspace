@@ -7,6 +7,7 @@ import { ChatBox } from "./Chat";
 import { sfx, vibrate } from "./feedback";
 import { formatClock } from "./hooks";
 import type { CrewClient, Snapshot } from "./net";
+import { btnGhost, btnPrimary, card } from "./ui";
 
 export function Meeting({ client, snapshot, now }: { client: CrewClient; snapshot: Snapshot; now: number }) {
   const state = snapshot.state!;
@@ -34,20 +35,20 @@ export function Meeting({ client, snapshot, now }: { client: CrewClient; snapsho
   if (stage === "intro") {
     const report = meeting.reason === "report";
     return (
-      <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#050505] px-6 text-center animate-[crew-fade_0.2s_ease-out_both]">
-        <div className={`absolute inset-x-0 top-1/2 h-24 -translate-y-1/2 ${report ? "bg-[#ffd23d]/10" : "bg-[#ff4d3d]/10"} animate-[crew-pulse_0.6s_ease-in-out_infinite]`} />
-        <p className={`relative text-sm tracking-[0.4em] ${report ? "text-[#ffd23d]" : "text-[#ff8a7e]"}`}>
-          {report ? "JOGADOR ENCONTRADO" : "REUNIÃO DE EMERGÊNCIA"}
+      <div className="crew-stars absolute inset-0 z-30 flex flex-col items-center justify-center px-6 text-center animate-[crew-fade_0.2s_ease-out_both]">
+        <div className={`absolute inset-x-0 top-1/2 h-40 -translate-y-1/2 border-y-[3px] border-[#16172a] ${report ? "bg-[#ffd23d]/25" : "bg-[#ff4d5e]/25"} animate-[crew-pulse_0.6s_ease-in-out_infinite]`} />
+        <p className={`crew-outline relative text-[clamp(2rem,9vw,3.4rem)] leading-none font-bold ${report ? "text-[#ffd23d]" : "text-[#ff4d5e]"}`}>
+          {report ? "CORPO ENCONTRADO!" : "REUNIÃO DE EMERGÊNCIA!"}
         </p>
         {report && victim && (
           <div className="relative mt-6 animate-[crew-pop_0.4s_cubic-bezier(0.16,1,0.3,1)_both]">
             <CharacterIcon color={victim.color} size={96} dead />
           </div>
         )}
-        <p className="relative mt-6 text-3xl font-light tracking-tight">
+        <p className="relative mt-6 text-2xl font-semibold">
           {report ? `${victim?.name ?? "Alguém"} foi eliminado` : `${caller?.name ?? "Alguém"} convocou`}
         </p>
-        {report && caller && <p className="relative mt-2 text-sm text-paper/50">Reportado por {caller.name}</p>}
+        {report && caller && <p className="relative mt-2 text-sm text-white/60">Reportado por {caller.name}</p>}
       </div>
     );
   }
@@ -56,7 +57,7 @@ export function Meeting({ client, snapshot, now }: { client: CrewClient; snapsho
   const result = meeting.result;
   const canVote = voting && you.alive && you.vote === null;
   const players = state.players;
-  const label = stage === "discussion" ? "DISCUSSÃO" : stage === "voting" ? "VOTAÇÃO" : "RESULTADO";
+  const label = stage === "discussion" ? "Discussão" : stage === "voting" ? "Quem é o infiltrado?" : "Resultado";
 
   const vote = (target: string) => {
     client.send({ type: "vote", target });
@@ -66,25 +67,25 @@ export function Meeting({ client, snapshot, now }: { client: CrewClient; snapsho
   };
 
   return (
-    <div className="absolute inset-0 z-30 flex flex-col bg-[#060606]/95 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-[env(safe-area-inset-bottom)] animate-[crew-fade_0.25s_ease-out_both] backdrop-blur-sm sm:items-center">
+    <div className="crew-stars absolute inset-0 z-30 flex flex-col pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-[env(safe-area-inset-bottom)] animate-[crew-fade_0.25s_ease-out_both] backdrop-blur-sm sm:items-center">
       <div className="flex w-full max-w-xl min-h-0 flex-1 flex-col">
         <header className="flex items-end justify-between px-4 pb-3">
           <div>
-            <p className="text-[10px] tracking-[0.35em] text-paper/50">REUNIÃO · {caller?.name?.toUpperCase()}</p>
-            <p className="text-2xl font-light tracking-[0.2em]">{label}</p>
+            <p className="text-xs font-semibold text-white/55">Reunião chamada por {caller?.name}</p>
+            <p className="crew-outline text-3xl font-bold text-white">{label}</p>
           </div>
           {stage !== "result" && (
-            <p className={`text-3xl font-light tabular-nums ${meeting.endsAt - now < 10_000 ? "text-[#ff8a7e]" : ""}`}>
+            <p className={`rounded-2xl border-[3px] border-[#16172a] px-3 py-1 text-2xl font-bold tabular-nums shadow-[0_4px_0_#16172a] ${meeting.endsAt - now < 10_000 ? "bg-[#ff4d5e] text-white" : "bg-[#ffd23d] text-[#16172a]"}`}>
               {formatClock(meeting.endsAt - now)}
             </p>
           )}
         </header>
 
         {stage === "discussion" && (
-          <p className="px-4 pb-2 text-xs text-paper/50">Converse com o grupo. A votação começa em instantes.</p>
+          <p className="px-4 pb-2 text-sm text-white/65">Converse com o grupo. A votação começa em instantes.</p>
         )}
-        {voting && !you.alive && <p className="px-4 pb-2 text-xs text-paper/50">Fantasmas não votam.</p>}
-        {voting && you.alive && you.vote !== null && <p className="px-4 pb-2 text-xs text-[#2ed47a]">Voto registrado. Aguardando os outros.</p>}
+        {voting && !you.alive && <p className="px-4 pb-2 text-sm text-white/65">Fantasmas não votam.</p>}
+        {voting && you.alive && you.vote !== null && <p className="px-4 pb-2 text-sm font-semibold text-[#3ddc84]">Voto registrado. Aguardando os outros.</p>}
 
         <ul className="grid shrink-0 grid-cols-2 gap-2 px-3">
           {players.map((p) => {
@@ -99,27 +100,23 @@ export function Meeting({ client, snapshot, now }: { client: CrewClient; snapsho
                   type="button"
                   disabled={!canVote || dead}
                   onClick={() => setSelected(isSelected ? null : p.id)}
-                  className={`relative flex w-full items-center gap-2 border px-2 py-1.5 text-left transition-colors ${
-                    result?.ejectedId === p.id
-                      ? "border-[#ff4d3d] bg-[#ff4d3d]/10"
-                      : isSelected
-                        ? "border-paper bg-paper/15"
-                        : "border-paper/12 bg-paper/[0.03]"
-                  } ${dead ? "opacity-35" : ""}`}
+                  className={`relative flex w-full items-center gap-2 rounded-2xl border-[3px] border-[#16172a] px-2 py-1.5 text-left shadow-[0_3px_0_#16172a] transition-colors ${
+                    result?.ejectedId === p.id ? "bg-[#ff4d5e]" : isSelected ? "bg-[#4fb6ff] text-[#16172a]" : "bg-[#2f3354]"
+                  } ${dead ? "opacity-40" : ""}`}
                 >
                   <CharacterIcon color={p.color} size={34} dead={dead} />
                   <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-sm ${dead ? "line-through" : ""}`}>{p.name}</span>
-                    {p.id === you.id && <span className="block text-[10px] tracking-[0.2em] text-paper/40">VOCÊ</span>}
+                    <span className={`block truncate text-sm font-semibold ${dead ? "line-through" : ""}`}>{p.name}</span>
+                    {p.id === you.id && <span className="block text-[11px] opacity-60">você</span>}
                   </span>
-                  {voting && voted && <span className="text-[10px] tracking-[0.15em] text-[#2ed47a]">VOTOU</span>}
+                  {voting && voted && <span className="rounded-md border-2 border-[#16172a] bg-[#3ddc84] px-1 text-[10px] font-bold text-[#16172a]">VOTOU</span>}
                   {result && (
                     <span className="flex items-center gap-0.5">
                       {voters.length > 0
                         ? voters.map((v) => (
-                            <span key={v} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colorHex(players.find((x) => x.id === v)?.color ?? "white") }} />
+                            <span key={v} className="h-3 w-3 rounded-full border-2 border-[#16172a]" style={{ backgroundColor: colorHex(players.find((x) => x.id === v)?.color ?? "white") }} />
                           ))
-                        : count > 0 && <span className="text-sm tabular-nums">{count}</span>}
+                        : count > 0 && <span className="text-sm font-bold tabular-nums">{count}</span>}
                     </span>
                   )}
                 </button>
@@ -131,10 +128,10 @@ export function Meeting({ client, snapshot, now }: { client: CrewClient; snapsho
         <div className="flex shrink-0 items-center gap-2 px-3 pt-2">
           {selected && canVote ? (
             <>
-              <button type="button" onClick={() => vote(selected)} className="flex-1 border border-paper bg-paper py-3 text-xs tracking-[0.25em] text-ink">
-                VOTAR EM {players.find((p) => p.id === selected)?.name.toUpperCase()}
+              <button type="button" onClick={() => vote(selected)} className={`${btnPrimary} flex-1 py-3 text-base`}>
+                Votar em {players.find((p) => p.id === selected)?.name}
               </button>
-              <button type="button" onClick={() => setSelected(null)} className="border border-paper/20 px-4 py-3 text-xs tracking-[0.2em]">
+              <button type="button" onClick={() => setSelected(null)} className={`${btnGhost} px-4 py-3 text-base`}>
                 ✕
               </button>
             </>
@@ -143,9 +140,9 @@ export function Meeting({ client, snapshot, now }: { client: CrewClient; snapsho
               type="button"
               disabled={!canVote}
               onClick={() => vote("skip")}
-              className="flex-1 border border-paper/25 py-3 text-xs tracking-[0.3em] text-paper/80 disabled:opacity-30"
+              className={`${btnGhost} flex-1 py-3 text-base`}
             >
-              PULAR VOTO{result ? ` · ${result.tally.skip ?? 0}` : ""}
+              Pular voto{result ? ` · ${result.tally.skip ?? 0}` : ""}
             </button>
           )}
         </div>
@@ -157,7 +154,7 @@ export function Meeting({ client, snapshot, now }: { client: CrewClient; snapsho
           show={you.alive ? ["meeting"] : ["meeting", "ghost"]}
           disabledText={you.alive ? null : "Fantasmas só observam a reunião."}
           placeholder="Diga o que você viu"
-          className="mt-2 min-h-[8rem] flex-1 border-t border-paper/10"
+          className={`${card} mx-3 mt-3 mb-2 min-h-[8rem] flex-1 overflow-hidden`}
         />
       </div>
     </div>

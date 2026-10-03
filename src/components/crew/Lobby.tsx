@@ -6,6 +6,7 @@ import { CharacterIcon } from "./CharacterIcon";
 import { ChatBox } from "./Chat";
 import { sfx, unlockAudio, vibrate } from "./feedback";
 import type { CrewClient, Snapshot } from "./net";
+import { btnGhost, btnPrimary, panel, toyButton } from "./ui";
 
 type Sheet = null | "players" | "settings" | "chat";
 
@@ -24,7 +25,7 @@ export function LobbyPanel({ client, snapshot }: { client: CrewClient; snapshot:
   return (
     <div className="absolute inset-x-0 bottom-0 flex flex-col items-stretch pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
       {sheet && (
-        <div className="mx-3 mb-2 max-h-[52dvh] overflow-hidden border border-paper/15 bg-ink/90 backdrop-blur animate-[crew-rise_0.25s_ease-out_both] sm:mx-auto sm:w-[28rem]">
+        <div className={`${panel} mx-3 mb-2 max-h-[52dvh] overflow-hidden animate-[crew-rise_0.25s_ease-out_both] sm:mx-auto sm:w-[28rem]`}>
           {sheet === "players" && <PlayersSheet client={client} snapshot={snapshot} isHost={isHost} />}
           {sheet === "settings" && <SettingsSheet client={client} settings={state.settings} players={state.players.length} />}
           {sheet === "chat" && <ChatBox client={client} snapshot={snapshot} channel="lobby" className="h-[40dvh]" />}
@@ -33,7 +34,7 @@ export function LobbyPanel({ client, snapshot }: { client: CrewClient; snapshot:
 
       <div className="mx-3 flex flex-col gap-2 sm:mx-auto sm:w-[28rem]">
         {/* Cores */}
-        <div className="flex items-center gap-2 overflow-x-auto border border-paper/15 bg-ink/70 px-2 py-2 backdrop-blur">
+        <div className={`${panel} flex items-center gap-2 overflow-x-auto px-2.5 py-2.5`}>
           {COLORS.map((c) => {
             const mine = me?.color === c.id;
             const used = taken.has(c.id);
@@ -48,7 +49,7 @@ export function LobbyPanel({ client, snapshot }: { client: CrewClient; snapshot:
                   client.send({ type: "color", color: c.id });
                   vibrate(8);
                 }}
-                className={`h-8 w-8 shrink-0 rounded-full border-2 transition-transform ${mine ? "scale-110 border-paper" : "border-transparent"} ${used ? "opacity-20" : ""}`}
+                className={`h-9 w-9 shrink-0 rounded-full border-[3px] border-[#16172a] transition-transform ${mine ? "scale-110 ring-[3px] ring-white" : ""} ${used ? "opacity-20" : ""}`}
                 style={{ backgroundColor: c.hex }}
               />
             );
@@ -60,11 +61,11 @@ export function LobbyPanel({ client, snapshot }: { client: CrewClient; snapshot:
             {state.players.length}/{state.settings.maxPlayers}
           </button>
           <button type="button" onClick={() => toggle("chat")} className={tab(sheet === "chat")}>
-            CHAT{unread > 0 ? ` · ${unread}` : ""}
+            Chat{unread > 0 ? ` · ${unread}` : ""}
           </button>
           {isHost && (
             <button type="button" onClick={() => toggle("settings")} className={tab(sheet === "settings")}>
-              AJUSTES
+              Ajustes
             </button>
           )}
         </div>
@@ -78,13 +79,13 @@ export function LobbyPanel({ client, snapshot }: { client: CrewClient; snapshot:
               sfx.tap();
               client.send({ type: "start" });
             }}
-            className="border border-paper bg-paper py-4 text-sm tracking-[0.35em] text-ink transition-colors disabled:border-paper/20 disabled:bg-transparent disabled:text-paper/40"
+            className={`${btnPrimary} py-4 text-xl`}
           >
-            {canStart ? "INICIAR" : `AGUARDANDO ${MIN_PLAYERS - connected} JOGADOR${MIN_PLAYERS - connected === 1 ? "" : "ES"}`}
+            {canStart ? "▶ Iniciar partida" : `Aguardando ${MIN_PLAYERS - connected} jogador${MIN_PLAYERS - connected === 1 ? "" : "es"}`}
           </button>
         ) : (
-          <p className="border border-paper/15 bg-ink/70 py-4 text-center text-[11px] tracking-[0.3em] text-paper/60 backdrop-blur">
-            AGUARDANDO O HOST INICIAR
+          <p className={`${panel} py-4 text-center text-base font-semibold text-white/70`}>
+            Aguardando o host iniciar…
           </p>
         )}
       </div>
@@ -93,31 +94,29 @@ export function LobbyPanel({ client, snapshot }: { client: CrewClient; snapshot:
 }
 
 function tab(active: boolean) {
-  return `flex-1 border px-3 py-2.5 text-[11px] tracking-[0.2em] backdrop-blur transition-colors ${
-    active ? "border-paper bg-paper text-ink" : "border-paper/15 bg-ink/70 text-paper/75"
-  }`;
+  return `${active ? `${toyButton} bg-[#4fb6ff] text-[#16172a]` : btnGhost} flex-1 px-3 py-2.5 text-sm`;
 }
 
 function PlayersSheet({ client, snapshot, isHost }: { client: CrewClient; snapshot: Snapshot; isHost: boolean }) {
   const state = snapshot.state!;
   return (
-    <ul className="max-h-[52dvh] divide-y divide-paper/10 overflow-y-auto">
+    <ul className="max-h-[52dvh] divide-y-2 divide-[#16172a]/60 overflow-y-auto">
       {state.players.map((p) => (
         <li key={p.id} className="flex items-center gap-3 px-3 py-2">
           <CharacterIcon color={p.color} size={36} />
-          <span className="min-w-0 flex-1 truncate">
+          <span className="min-w-0 flex-1 truncate font-semibold">
             {p.name}
-            {p.id === state.you.id && <span className="text-paper/40"> (você)</span>}
+            {p.id === state.you.id && <span className="font-normal text-white/45"> (você)</span>}
           </span>
-          {p.isHost && <span className="text-[10px] tracking-[0.25em] text-paper/50">HOST</span>}
+          {p.isHost && <span className="rounded-md bg-[#ffd23d] px-1.5 text-[10px] font-bold text-[#16172a]">HOST</span>}
           {!p.connected && <span className="text-[10px] tracking-[0.2em] text-[#ffd23d]">RECONECTANDO</span>}
           {isHost && p.id !== state.you.id && (
             <button
               type="button"
               onClick={() => client.send({ type: "kick", playerId: p.id })}
-              className="border border-[#ff4d3d]/50 px-2 py-1 text-[10px] tracking-[0.2em] text-[#ff8a7e]"
+              className={`${toyButton} bg-[#ff4d5e] px-2 py-1 text-xs text-white`}
             >
-              REMOVER
+              Remover
             </button>
           )}
         </li>
@@ -142,13 +141,13 @@ const NUMERIC: { key: NumericKey; label: string; format: (v: number) => string }
 function SettingsSheet({ client, settings, players }: { client: CrewClient; settings: Settings; players: number }) {
   const update = (patch: Partial<Settings>) => client.send({ type: "settings", settings: patch });
   return (
-    <div className="max-h-[52dvh] divide-y divide-paper/10 overflow-y-auto">
+    <div className="max-h-[52dvh] divide-y-2 divide-[#16172a]/60 overflow-y-auto">
       {NUMERIC.map(({ key, label, format }) => {
         const { min, max, step } = SETTING_LIMITS[key];
         const value = settings[key];
         return (
           <div key={key} className="flex items-center justify-between gap-3 px-3 py-2.5">
-            <span className="text-sm text-paper/80">{label}</span>
+            <span className="text-sm font-semibold text-white/85">{label}</span>
             <div className="flex items-center gap-1">
               <Stepper label="−" disabled={value <= min} onClick={() => update({ [key]: value - step })} />
               <span className="w-14 text-center text-sm tabular-nums">{format(value)}</span>
@@ -172,7 +171,7 @@ function Stepper({ label, disabled, onClick }: { label: string; disabled: boolea
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="h-9 w-9 border border-paper/20 text-lg leading-none disabled:opacity-25"
+      className={`${toyButton} h-9 w-9 bg-[#3a3f66] text-lg leading-none text-white`}
       aria-label={label === "+" ? "Aumentar" : "Diminuir"}
     >
       {label}
@@ -183,14 +182,14 @@ function Stepper({ label, disabled, onClick }: { label: string; disabled: boolea
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-2.5">
-      <span className="text-sm text-paper/80">{label}</span>
+      <span className="text-sm font-semibold text-white/85">{label}</span>
       <div className="flex">
         {[true, false].map((v) => (
           <button
             key={String(v)}
             type="button"
             onClick={() => onChange(v)}
-            className={`w-14 border py-1.5 text-[11px] tracking-[0.2em] ${value === v ? "border-paper bg-paper text-ink" : "border-paper/20 text-paper/60"}`}
+            className={`w-14 border-[3px] border-[#16172a] py-1 text-xs font-bold first:rounded-l-xl last:rounded-r-xl ${value === v ? "bg-[#3ddc84] text-[#16172a]" : "bg-[#15172b] text-white/60"}`}
           >
             {v ? "SIM" : "NÃO"}
           </button>

@@ -34,7 +34,7 @@ export function CrewApp() {
       onContextMenu={(e) => {
         if (!(e.target instanceof HTMLInputElement)) e.preventDefault();
       }}
-      className="fixed inset-0 overflow-hidden bg-[#050505] text-paper select-none overscroll-none [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]"
+      className="fixed inset-0 overflow-hidden bg-[#0f1022] font-[family-name:var(--font-crew)] text-paper select-none overscroll-none [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]"
     >
       <h1 className="sr-only">AMOUNG QUAD</h1>
       {snapshot.state ? (

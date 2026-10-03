@@ -15,6 +15,7 @@ import {
   type DoorId,
   type Point,
   type Rect,
+  type RoomId,
   type TaskId,
 } from "@/lib/crew/map";
 
@@ -34,10 +35,6 @@ export function rgba(hex: string, alpha: number) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-const FLOOR = "#1c1612";
-const FLOOR_LINE = "rgba(255,220,190,0.045)";
-const WALL_FILL = "#d9d7d2";
-const WALL_EDGE = "#8f8c86";
 const ACCENT_RED = "#ff4d3d";
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -70,61 +67,79 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const f = o.facing >= 0 ? 1 : -1;
   ctx.save();
   ctx.globalAlpha = o.alpha ?? 1;
-  const bob = o.ghost ? Math.sin(o.walk * 0.6) * 3 - 6 : o.moving ? Math.abs(Math.sin(o.walk)) * -2 : 0;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#16172a";
+  const bob = o.ghost ? Math.sin(o.walk * 0.6) * 3 - 6 : o.moving ? Math.abs(Math.sin(o.walk)) * -2.5 : 0;
 
   if (!o.ghost) {
-    ctx.fillStyle = "rgba(0,0,0,0.38)";
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
     ctx.beginPath();
-    ctx.ellipse(x, y + 1, 17, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 1, 18, 6, 0, 0, Math.PI * 2);
     ctx.fill();
     // Pernas
-    const step = o.moving ? Math.sin(o.walk) * 3.5 : 0;
-    ctx.fillStyle = shade(hex, -0.45);
-    roundRect(ctx, x - 11, y - 11 + step, 9, 11, 3.5);
+    const step = o.moving ? Math.sin(o.walk) * 4 : 0;
+    ctx.fillStyle = shade(hex, -0.3);
+    roundRect(ctx, x - 13, y - 13 + step, 11, 13, 4.5);
     ctx.fill();
-    roundRect(ctx, x + 2, y - 11 - step, 9, 11, 3.5);
+    ctx.stroke();
+    roundRect(ctx, x + 2, y - 13 - step, 11, 13, 4.5);
     ctx.fill();
+    ctx.stroke();
   }
 
-  const top = y - 44 + bob;
-  // Corpo
-  const grad = ctx.createLinearGradient(0, top, 0, top + 36);
-  grad.addColorStop(0, shade(hex, 0.18));
-  grad.addColorStop(1, shade(hex, -0.22));
-  ctx.fillStyle = grad;
+  const top = y - 47 + bob;
+  // Corpo em formato de cápsula
+  ctx.fillStyle = hex;
   if (o.ghost) {
     ctx.beginPath();
-    ctx.moveTo(x - 15, top + 12);
-    ctx.arcTo(x - 15, top, x, top, 12);
-    ctx.arcTo(x + 15, top, x + 15, top + 12, 12);
-    ctx.lineTo(x + 15, top + 32);
+    ctx.moveTo(x - 17, top + 15);
+    ctx.arcTo(x - 17, top, x, top, 15);
+    ctx.arcTo(x + 17, top, x + 17, top + 15, 15);
+    ctx.lineTo(x + 17, top + 34);
     for (let i = 0; i <= 6; i++) {
-      const px = x + 15 - (30 * i) / 6;
-      ctx.lineTo(px, top + 32 + (i % 2 === 0 ? 0 : 5) + Math.sin(o.walk + i) * 1.5);
+      const px = x + 17 - (34 * i) / 6;
+      ctx.lineTo(px, top + 34 + (i % 2 === 0 ? 0 : 6) + Math.sin(o.walk + i) * 1.5);
     }
     ctx.closePath();
   } else {
-    roundRect(ctx, x - 16, top - 1, 32, 37, 15);
+    roundRect(ctx, x - 17, top, 34, 39, 16);
   }
   ctx.fill();
-
-  // Visor com faixa de luz (marca do personagem)
-  ctx.fillStyle = "#0b0b0e";
-  roundRect(ctx, x - 12 + f * 2, top + 7, 24, 11, 5.5);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  roundRect(ctx, x - 7 + f * 4, top + 11.5, 14, 2.2, 1.1);
-  ctx.fill();
-
-  // Antena com luz
-  ctx.strokeStyle = shade(hex, -0.35);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x - f * 7, top + 2);
-  ctx.lineTo(x - f * 9, top - 7);
   ctx.stroke();
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(x - f * 9 - 2, top - 10, 4, 4);
+  // Sombra lateral (volume)
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(x - f * 17 - (f > 0 ? 0 : -9) - 9 * (f > 0 ? 1 : 0), top, 9, 42);
+  ctx.restore();
+
+  // Visor de vidro com brilho
+  const vx = x - 12 + f * 3;
+  const vy = top + 8;
+  const glass = ctx.createLinearGradient(0, vy, 0, vy + 14);
+  glass.addColorStop(0, "#d6f3ff");
+  glass.addColorStop(1, "#5eb3e0");
+  ctx.fillStyle = glass;
+  roundRect(ctx, vx, vy, 24, 14, 7);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  roundRect(ctx, vx + 4 + (f > 0 ? 8 : 0), vy + 3, 8, 3.5, 1.75);
+  ctx.fill();
+
+  // Antena (detalhe próprio do personagem QUAD)
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x - f * 8, top + 1);
+  ctx.lineTo(x - f * 10, top - 9);
+  ctx.stroke();
+  ctx.fillStyle = "#ffd23d";
+  ctx.beginPath();
+  ctx.arc(x - f * 10, top - 11, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.stroke();
 
   ctx.restore();
 }
@@ -132,39 +147,44 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
 /** Personagem desativado (eliminado) com holograma. */
 export function drawBody(ctx: CanvasRenderingContext2D, x: number, y: number, hex: string, t: number) {
   ctx.save();
-  const gray = shade(hex, -0.55);
-  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#16172a";
+  ctx.lineWidth = 3;
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(x, y, 24, 9, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y + 2, 26, 9, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Corpo deitado
-  ctx.fillStyle = gray;
-  roundRect(ctx, x - 22, y - 16, 40, 22, 9);
+  // Corpo desligado, deitado
+  ctx.fillStyle = shade(hex, -0.25);
+  roundRect(ctx, x - 24, y - 18, 44, 24, 11);
   ctx.fill();
-  ctx.fillStyle = "#050506";
-  roundRect(ctx, x + 6, y - 12, 9, 14, 4);
+  ctx.stroke();
+  ctx.fillStyle = "#3a3f55";
+  roundRect(ctx, x + 4, y - 14, 12, 15, 5);
   ctx.fill();
-  // Linhas de glitch
-  ctx.fillStyle = rgba(hex, 0.5);
-  for (let i = 0; i < 3; i++) {
-    const gy = y - 14 + ((t * 0.02 + i * 7) % 20);
-    ctx.fillRect(x - 24 + Math.sin(t * 0.01 + i) * 3, gy, 44, 1.5);
-  }
-  // Holograma girando
-  const hy = y - 40 + Math.sin(t * 0.004) * 3;
-  const w = Math.abs(Math.cos(t * 0.003)) * 9 + 2;
-  ctx.fillStyle = rgba(hex, 0.75);
+  ctx.stroke();
+  // Olhos de "desligado"
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(x, hy - 11);
+  ctx.moveTo(x + 7, y - 10);
+  ctx.lineTo(x + 13, y - 4);
+  ctx.moveTo(x + 13, y - 10);
+  ctx.lineTo(x + 7, y - 4);
+  ctx.stroke();
+  // Holograma de alerta girando
+  const hy = y - 44 + Math.sin(t * 0.004) * 3;
+  const w = Math.abs(Math.cos(t * 0.003)) * 10 + 3;
+  ctx.fillStyle = "#ffd23d";
+  ctx.strokeStyle = "#16172a";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x, hy - 12);
   ctx.lineTo(x + w, hy);
-  ctx.lineTo(x, hy + 11);
+  ctx.lineTo(x, hy + 12);
   ctx.lineTo(x - w, hy);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = rgba(hex, 0.35);
-  ctx.beginPath();
-  ctx.moveTo(x, hy + 12);
-  ctx.lineTo(x, y - 14);
   ctx.stroke();
   ctx.restore();
 }
@@ -213,42 +233,101 @@ const TRACKS: { x1: number; y1: number; x2: number; y2: number; spots: number }[
   { x1: 1260, y1: 900, x2: 1720, y2: 900, spots: 4 },
 ];
 
-function drawFloor(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = FLOOR;
-  ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
-  ctx.strokeStyle = FLOOR_LINE;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  for (let x = 0; x <= MAP_WIDTH; x += 64) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, MAP_HEIGHT);
-  }
-  for (let y = 0; y <= MAP_HEIGHT; y += 64) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(MAP_WIDTH, y);
-  }
-  ctx.stroke();
+type FloorStyle = { base: string; line: string; tile: number; kind: "tile" | "planks" | "checker" | "plate" | "concrete" };
 
-  // Recepção: piso mais escuro (parede preta) + tapete listrado
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
-  ctx.fillRect(1180, 760, 620, 540);
+const FLOORS: Record<RoomId, FloorStyle> = {
+  estudio: { base: "#cfcbc4", line: "rgba(0,0,0,0.07)", tile: 80, kind: "concrete" },
+  edicao: { base: "#b9824f", line: "rgba(60,30,10,0.28)", tile: 28, kind: "planks" },
+  lounge: { base: "#c97c52", line: "rgba(90,40,15,0.3)", tile: 64, kind: "tile" },
+  corredor: { base: "#8c90a0", line: "rgba(20,20,40,0.22)", tile: 64, kind: "tile" },
+  equipamentos: { base: "#6d7f96", line: "rgba(255,255,255,0.08)", tile: 48, kind: "plate" },
+  recepcao: { base: "#e4ddd0", line: "#cfc5b4", tile: 48, kind: "checker" },
+};
+
+function drawFloor(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = "#1b1c2b";
+  ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+  for (const room of ROOMS) {
+    const { x, y, w, h } = room.rect;
+    const st = FLOORS[room.id];
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.fillStyle = st.base;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = st.line;
+    ctx.fillStyle = st.line;
+    ctx.lineWidth = 2;
+    if (st.kind === "checker") {
+      for (let ty = y; ty < y + h; ty += st.tile)
+        for (let tx = x; tx < x + w; tx += st.tile)
+          if (((tx - x) / st.tile + (ty - y) / st.tile) % 2 === 0) ctx.fillRect(tx, ty, st.tile, st.tile);
+    } else if (st.kind === "planks") {
+      for (let ty = y, row = 0; ty < y + h; ty += st.tile, row++) {
+        ctx.beginPath();
+        ctx.moveTo(x, ty);
+        ctx.lineTo(x + w, ty);
+        ctx.stroke();
+        for (let tx = x + (row % 3) * 60; tx < x + w; tx += 180) {
+          ctx.beginPath();
+          ctx.moveTo(tx, ty);
+          ctx.lineTo(tx, ty + st.tile);
+          ctx.stroke();
+        }
+      }
+    } else if (st.kind === "plate") {
+      for (let ty = y; ty < y + h; ty += st.tile)
+        for (let tx = x; tx < x + w; tx += st.tile) {
+          ctx.fillRect(tx + 10, ty + 14, 10, 4);
+          ctx.fillRect(tx + 30, ty + 30, 4, 10);
+        }
+      ctx.strokeStyle = "rgba(0,0,0,0.18)";
+      for (let tx = x; tx < x + w; tx += st.tile * 2) {
+        ctx.beginPath();
+        ctx.moveTo(tx, y);
+        ctx.lineTo(tx, y + h);
+        ctx.stroke();
+      }
+    } else {
+      ctx.beginPath();
+      for (let tx = x; tx <= x + w; tx += st.tile) {
+        ctx.moveTo(tx, y);
+        ctx.lineTo(tx, y + h);
+      }
+      for (let ty = y; ty <= y + h; ty += st.tile) {
+        ctx.moveTo(x, ty);
+        ctx.lineTo(x + w, ty);
+      }
+      ctx.stroke();
+    }
+    // Sombra suave junto às paredes (profundidade)
+    const shadow = ctx.createLinearGradient(0, y, 0, y + 40);
+    shadow.addColorStop(0, "rgba(0,0,0,0.22)");
+    shadow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = shadow;
+    ctx.fillRect(x, y, w, 40);
+    ctx.restore();
+  }
+
+  // Recepção: tapete listrado
   const rug = { x: 1330, y: 920, w: 240, h: 200 };
-  ctx.fillStyle = "#26231f";
-  ctx.fillRect(rug.x, rug.y, rug.w, rug.h);
-  ctx.fillStyle = "rgba(255,255,255,0.06)";
-  for (let i = 0; i < rug.h; i += 8) ctx.fillRect(rug.x, rug.y + i, rug.w * (0.4 + 0.6 * Math.abs(Math.sin(i))), 3);
+  ctx.fillStyle = "#2c2f40";
+  roundRect(ctx, rug.x, rug.y, rug.w, rug.h, 10);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  for (let i = 10; i < rug.h - 10; i += 14) ctx.fillRect(rug.x + 12, rug.y + i, rug.w - 24, 5);
 
   // Estúdio: fundo infinito branco
   const bd = { x: 330, y: 12, w: 440, h: 300 };
   const g = ctx.createLinearGradient(0, bd.y, 0, bd.y + bd.h);
-  g.addColorStop(0, "#f4f2ee");
-  g.addColorStop(0.75, "#e2dfd9");
-  g.addColorStop(1, "rgba(226,223,217,0)");
+  g.addColorStop(0, "#ffffff");
+  g.addColorStop(0.8, "#f1efea");
+  g.addColorStop(1, "rgba(241,239,234,0)");
   ctx.fillStyle = g;
   ctx.fillRect(bd.x, bd.y, bd.w, bd.h);
-  // Barra do rolo de papel
-  ctx.fillStyle = "#0e0e0e";
-  ctx.fillRect(bd.x - 30, 14, bd.w + 60, 9);
+  ctx.fillStyle = "#16172a";
+  ctx.fillRect(bd.x - 30, 14, bd.w + 60, 10);
 }
 
 function drawTrackLights(ctx: CanvasRenderingContext2D, dim: boolean) {
@@ -257,11 +336,11 @@ function drawTrackLights(ctx: CanvasRenderingContext2D, dim: boolean) {
       const k = (i + 0.5) / t.spots;
       const x = t.x1 + (t.x2 - t.x1) * k;
       const y = t.y1 + (t.y2 - t.y1) * k;
-      const pool = ctx.createRadialGradient(x, y + 30, 0, x, y + 30, 150);
-      pool.addColorStop(0, dim ? "rgba(255,120,90,0.06)" : "rgba(255,196,140,0.13)");
-      pool.addColorStop(1, "rgba(255,196,140,0)");
+      const pool = ctx.createRadialGradient(x, y + 30, 0, x, y + 30, 130);
+      pool.addColorStop(0, dim ? "rgba(255,90,70,0.05)" : "rgba(255,236,190,0.18)");
+      pool.addColorStop(1, "rgba(255,236,190,0)");
       ctx.fillStyle = pool;
-      ctx.fillRect(x - 150, y - 120, 300, 300);
+      ctx.fillRect(x - 130, y - 100, 260, 260);
     }
   }
 }
@@ -299,34 +378,48 @@ function text(ctx: CanvasRenderingContext2D, lines: string[], x: number, y: numb
   lines.forEach((line, i) => ctx.fillText(line, x, y + i * size * lh));
 }
 
+function outlined(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, size: number, font: string, fill: string, alpha = 1) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = `700 ${size}px ${font}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = size * 0.22;
+  ctx.strokeStyle = "#16172a";
+  ctx.strokeText(label, x, y);
+  ctx.fillStyle = fill;
+  ctx.fillText(label, x, y);
+  ctx.restore();
+}
+
 function drawDecals(ctx: CanvasRenderingContext2D, s: MapScene) {
-  // Logo QUAD no chão do estúdio (reflexo do logo do teto)
-  text(ctx, ["QUAD"], 840, 330, 64, s.font, "rgba(255,255,255,0.05)", "center", 400);
   // Estrelas da marca na parede do estúdio
   if (s.brand && s.brand.complete && s.brand.naturalWidth > 0) {
-    ctx.globalAlpha = 0.85;
+    ctx.save();
+    ctx.filter = "invert(1)";
     ctx.drawImage(s.brand, 820, 40, 120, 35);
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
-  text(ctx, ["Create.", "Focus.", "Work.", "Repeat."], 120, 300, 22, s.font, "rgba(255,255,255,0.32)", "left", 400, 1.0);
-  text(ctx, ["WILLKOMMEN", "BEM VINDO", "欢迎光临"], 380, 548, 22, s.font, "rgba(255,255,255,0.34)", "left", 400, 1.05);
-  text(ctx, ["Artístico", "evento", "Publicidade", "Filme."], 1480, 330, 18, s.font, "rgba(255,255,255,0.3)", "left", 300, 1.15);
+  text(ctx, ["Create.", "Focus.", "Work.", "Repeat."], 120, 300, 22, s.font, "rgba(22,23,42,0.55)", "left", 600, 1.0);
+  text(ctx, ["WILLKOMMEN", "BEM VINDO", "欢迎光临"], 380, 548, 22, s.font, "rgba(22,23,42,0.5)", "left", 600, 1.05);
+  text(ctx, ["Artístico", "evento", "Publicidade", "Filme."], 1480, 330, 18, s.font, "rgba(22,23,42,0.5)", "left", 600, 1.15);
 
-  // Nomes dos ambientes
+  // Nomes dos ambientes em letras grossas (como placas no chão)
   for (const room of ROOMS) {
     const c = center(room.rect);
-    const y = room.id === "corredor" ? c.y + 30 : c.y + room.rect.h * 0.18;
-    ctx.save();
-    ctx.font = `400 15px ${s.font}`;
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255,255,255,0.16)";
-    const label = room.name.split("").join(String.fromCharCode(8202));
-    ctx.fillText(label, c.x, y);
-    ctx.restore();
+    const y = room.id === "corredor" ? c.y + 34 : c.y + room.rect.h * 0.2;
+    outlined(ctx, room.name, c.x, y, 38, s.font, "#f4f1ea", 0.85);
   }
 }
 
 function drawFurniture(ctx: CanvasRenderingContext2D, s: MapScene) {
+  // Sombra de contato de cada móvel
+  for (const f of FURNITURE) {
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    roundRect(ctx, f.rect.x + 4, f.rect.y + 6, f.rect.w, f.rect.h, 8);
+    ctx.fill();
+  }
   for (const f of FURNITURE) {
     const { x, y, w, h } = f.rect;
     const c = center(f.rect);
@@ -585,26 +678,30 @@ function drawFurniture(ctx: CanvasRenderingContext2D, s: MapScene) {
 }
 
 function drawWalls(ctx: CanvasRenderingContext2D) {
+  ctx.lineJoin = "round";
   for (const w of WALLS) {
-    ctx.fillStyle = WALL_FILL;
+    // Face frontal (altura) + topo
+    ctx.fillStyle = "#2d3044";
+    ctx.fillRect(w.x, w.y, w.w, w.h + 10);
+    ctx.fillStyle = "#4b5070";
     ctx.fillRect(w.x, w.y, w.w, w.h);
-    ctx.strokeStyle = WALL_EDGE;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(w.x + 0.75, w.y + 0.75, w.w - 1.5, w.h - 1.5);
+    ctx.fillStyle = "#62688c";
+    ctx.fillRect(w.x, w.y, w.w, 4);
+    ctx.strokeStyle = "#16172a";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(w.x, w.y, w.w, w.h + 10);
   }
   // Parede preta da recepção (lado norte)
-  ctx.fillStyle = "#101010";
+  ctx.fillStyle = "#0e0f18";
   ctx.fillRect(1540, 748, 260, 24);
   // Porta de entrada com luz vazando
-  ctx.fillStyle = "#0b0b0b";
-  ctx.fillRect(1440, 1288, 90, 12);
+  ctx.fillStyle = "#16172a";
+  ctx.fillRect(1440, 1286, 90, 14);
   const leak = ctx.createLinearGradient(0, 1300, 0, 1230);
-  leak.addColorStop(0, "rgba(255,244,220,0.22)");
-  leak.addColorStop(1, "rgba(255,244,220,0)");
+  leak.addColorStop(0, "rgba(255,244,200,0.35)");
+  leak.addColorStop(1, "rgba(255,244,200,0)");
   ctx.fillStyle = leak;
-  ctx.fillRect(1430, 1230, 110, 58);
-
-
+  ctx.fillRect(1430, 1230, 110, 56);
 }
 
 function drawDoors(ctx: CanvasRenderingContext2D, s: MapScene) {

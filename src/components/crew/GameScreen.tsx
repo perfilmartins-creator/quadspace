@@ -73,7 +73,7 @@ export function GameScreen({ client, snapshot }: Props) {
     const fog = fogCanvas?.getContext("2d");
     if (!canvas || !fogCanvas || !ctx || !fog) return;
 
-    const font = getComputedStyle(document.body).fontFamily;
+    const font = getComputedStyle(canvas).fontFamily;
     const brand = new Image();
     let mapCache: HTMLCanvasElement | null = null;
     let mapCacheKey = "";
@@ -341,7 +341,7 @@ export function GameScreen({ client, snapshot }: Props) {
       drawCeiling(ctx);
 
       // Nomes
-      ctx.font = `400 13px ${font}`;
+      ctx.font = `600 14px ${font}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       for (const d of drawn) {
