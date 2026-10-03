@@ -176,7 +176,7 @@ function LobbyHud({
   }, []);
 
   const useLabel =
-    near.use?.kind === "goat" ? "CARINHO" : near.use?.kind === "object" ? (LOBBY_OBJECTS.find((o) => o.id === (near.use as { objectId: string }).objectId)?.label ?? "INTERAGIR") : null;
+    near.use?.kind === "rat" ? "BATER" : near.use?.kind === "object" ? (LOBBY_OBJECTS.find((o) => o.id === (near.use as { objectId: string }).objectId)?.label ?? "INTERAGIR") : null;
 
   return (
     <>
@@ -599,8 +599,8 @@ function ActionButtons({ client, snapshot, near, now, onUse }: { client: CrewCli
         ? "REUNIÃO"
         : near.use.kind === "lights"
           ? "LUZ"
-          : near.use.kind === "goat"
-            ? "CARINHO"
+          : near.use.kind === "rat"
+            ? "BATER"
             : "PAINEL"
     : null;
 

@@ -272,8 +272,8 @@ function handleGame(conn: Connection, msg: ClientMessage) {
     case "ventMove":
       room.ventMove(player, msg.ventId);
       break;
-    case "pet":
-      room.pet(player);
+    case "hitRat":
+      room.hitRat(player);
       break;
     case "ready":
       room.setReady(player, msg.ready === true);

@@ -187,10 +187,10 @@ const RULES: { title: string; body: string[] }[] = [
     body: ["Todos conversam no chat e votam em quem expulsar. Pode pular o voto. Quem tiver mais votos sai da nave… quer dizer, do estúdio."],
   },
   {
-    title: "Júlio, a cabra",
+    title: "Júlio, o rato",
     body: [
-      "O Júlio mora na QUAD e passeia sozinho pelo estúdio. Ele aparece no mapa e bale de vez em quando.",
-      "Chegue perto e toque em CARINHO para ele parar e dar um “Méééé!”. Ele não tem lado: não ajuda nem atrapalha ninguém… ou será que sim?",
+      "O Júlio é o rato que mora na QUAD e corre sozinho pelo estúdio. Ele aparece no mapa e guincha de vez em quando.",
+      "Qualquer jogador pode chegar perto e tocar em BATER: você ganha +10 XP, ele solta um “Iiic!” e dispara para longe. Corra atrás dele! Ele não ajuda nem atrapalha ninguém na partida.",
     ],
   },
   {

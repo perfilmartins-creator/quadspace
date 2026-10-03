@@ -180,7 +180,7 @@ export type ClientMessage =
   | { type: "backToLobby"; again?: boolean }
   | { type: "vent"; action: "enter" | "exit" }
   | { type: "ventMove"; ventId: VentId }
-  | { type: "pet" }
+  | { type: "hitRat" }
   | { type: "ready"; ready: boolean }
   | { type: "emote"; emote: EmoteId }
   | { type: "interact"; objectId: LobbyObjectId }
@@ -199,7 +199,8 @@ export type LobbyFx =
   | { kind: "host"; name: string }
   | { kind: "cancel"; reason: string }
   | { kind: "joined"; name: string }
-  | { kind: "coffee" | "tv"; byName: string };
+  | { kind: "coffee" | "tv"; byName: string }
+  | { kind: "xp"; amount: number; reason: string };
 
 // ---------- Servidor → cliente ----------
 
@@ -230,8 +231,8 @@ export type ServerMessage =
   | { type: "pong"; c: number; s: number }
   | { type: "emote"; playerId: string; emote: EmoteId }
   | { type: "fx"; fx: LobbyFx }
-  /** O Júlio baliu (sozinho ou porque alguém fez carinho). */
-  | { type: "bleat"; byId: string | null; byName: string | null };
+  /** O Júlio guinchou (sozinho ou porque alguém bateu nele). */
+  | { type: "squeak"; byId: string | null; byName: string | null };
 
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   ROOM_NOT_FOUND: "Sala não encontrada.",

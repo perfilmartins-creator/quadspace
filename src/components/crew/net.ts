@@ -113,8 +113,8 @@ export class CrewClient {
   private snapOffset: number | null = null;
   localReady = false;
   kills: KillFx[] = [];
-  /** Último balido do Júlio (performance.now()). */
-  bleat: { at: number; byId: string | null; byName: string | null } | null = null;
+  /** Último guincho do Júlio (performance.now()). */
+  squeak: { at: number; byId: string | null; byName: string | null } | null = null;
   /** Emotes recentes por jogador (performance.now()). */
   emotes = new Map<string, { emote: EmoteId; at: number }>();
   /** Últimos chutes na bola (para partículas). */
@@ -369,8 +369,8 @@ export class CrewClient {
           this.update({ chat: [...this.snapshot.chat.slice(-60), msg.message] });
         }
         break;
-      case "bleat":
-        this.bleat = { at: performance.now(), byId: msg.byId, byName: msg.byName };
+      case "squeak":
+        this.squeak = { at: performance.now(), byId: msg.byId, byName: msg.byName };
         break;
       case "killed":
         this.kills.push({ victimId: msg.victimId, x: msg.x, y: msg.y, at: performance.now() });
@@ -527,6 +527,11 @@ export class CrewClient {
         break;
       case "tv":
         this.toast(`📺 ${fx.byName} trocou o canal da TV`, "info", 2000);
+        break;
+      case "xp":
+        sfx.whack();
+        vibrate(20);
+        this.toast(`+${fx.amount} XP · ${fx.reason}`, "mission", 1600);
         break;
     }
   }

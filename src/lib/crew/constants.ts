@@ -235,12 +235,18 @@ export function normalizeRoomCode(raw: unknown): string | null {
   return code;
 }
 
-// ---------- Júlio, a cabra da QUAD ----------
+// ---------- Júlio, o rato da QUAD ----------
 
 /** Id do Júlio nos pacotes de posição (jogadores nunca têm "@" no id). */
-export const GOAT_ID = "@julio";
-export const GOAT_NAME = "Júlio";
-/** Mais devagar que os jogadores: dá para alcançar e fazer carinho. */
-export const GOAT_SPEED = 95;
-export const PET_RANGE = 85;
-export const PET_COOLDOWN_MS = 2500;
+export const RAT_ID = "@julio";
+export const RAT_NAME = "Júlio";
+/** Rato corre rapidinho, mas ainda mais devagar que os jogadores: dá para alcançar e bater (+XP). */
+export const RAT_SPEED = 130;
+export const RAT_HIT_RANGE = 85;
+/** Intervalo entre duas pancadas do mesmo jogador (anti-spam de XP). */
+export const RAT_HIT_COOLDOWN_MS = 2500;
+/** XP ganho por pancada no Júlio. */
+export const RAT_XP = 10;
+/** Depois de apanhar, o Júlio dispara para longe por este tempo, mais rápido. */
+export const RAT_FLEE_MS = 1400;
+export const RAT_FLEE_SPEED = 2.1;

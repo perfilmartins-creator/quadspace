@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { CRITICAL_PANELS, DOORS, LIGHTS_PANEL, MAP_HEIGHT, MAP_WIDTH, ROOMS, TASKS, WALLS } from "@/lib/crew/map";
-import { GOAT_ID } from "@/lib/crew/constants";
+import { RAT_ID } from "@/lib/crew/constants";
 import type { RoomState } from "@/lib/crew/protocol";
 import { IconClose } from "./icons";
 import type { CrewClient } from "./net";
@@ -87,11 +87,11 @@ export function MapOverlay({ client, state, onClose }: { client: CrewClient; sta
           ctx.fill();
         }
       }
-      // Júlio, a cabra: sempre aparece no mapa (é a graça de procurar por ele).
-      const goat = client.tracks.get(GOAT_ID)?.samples.at(-1);
-      if (goat) {
+      // Júlio, o rato: sempre aparece no mapa (é a graça de procurar por ele).
+      const rat = client.tracks.get(RAT_ID)?.samples.at(-1);
+      if (rat) {
         ctx.font = `${Math.round(54 / Math.max(k, 0.3)) / 2}px sans-serif`;
-        ctx.fillText("🐐", goat.x, goat.y);
+        ctx.fillText("🐭", rat.x, rat.y);
       }
       const me = client.local;
       ctx.fillStyle = "#4fb6ff";
@@ -134,7 +134,7 @@ export function MapOverlay({ client, state, onClose }: { client: CrewClient; sta
             <span className="h-3.5 w-3.5 rounded-full border-2 border-[#16172a] bg-[#ff4d5e]" /> Sabotagem
           </span>
           <span className="flex items-center gap-1.5">
-            <span aria-hidden="true">🐐</span> Júlio
+            <span aria-hidden="true">🐭</span> Júlio
           </span>
           <span className="hidden text-white/45 [@media(pointer:fine)]:inline">M para fechar</span>
         </div>

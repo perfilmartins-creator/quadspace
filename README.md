@@ -93,7 +93,7 @@ src/components/crew/       # cliente: canvas, HUD minimalista, painéis, reuniã
 ```
 
 Fluxo: o lobby é um mapa jogável (bola com gols e placar, Safe Zone, Ready Zone,
-missões, emotes, totens de modo/configuração e o Júlio, a cabra). O host escolhe o
+missões, emotes, totens de modo/configuração e o Júlio, o rato). O host escolhe o
 modo e as configurações (com presets), todos ficam READY, a contagem de 5 s roda no
 próprio lobby (cancelável) e a partida começa sem recarregar a página. No fim, todos
 voltam ao mesmo lobby com a bola resetada e as configurações mantidas.

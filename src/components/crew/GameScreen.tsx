@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BASE_SPEED,
   EMERGENCY_RANGE,
-  GOAT_ID,
-  GOAT_NAME,
+  RAT_ID,
+  RAT_NAME,
   KILL_RANGE,
-  PET_RANGE,
+  RAT_HIT_RANGE,
   REPORT_RANGE,
   USE_RANGE,
   VENT_RANGE,
@@ -33,7 +33,7 @@ import type { RoomState } from "@/lib/crew/protocol";
 import { sfx, unlockAudio, vibrate } from "./feedback";
 import { Hud, type PanelId } from "./Hud";
 import type { CrewClient, Snapshot } from "./net";
-import { buildMapCache, drawBody, drawBubble, drawCeiling, drawCharacter, drawFog, drawGoat, drawKillFx, drawMapDynamic } from "./render";
+import { buildMapCache, drawBody, drawBubble, drawCeiling, drawCharacter, drawFog, drawRat, drawKillFx, drawMapDynamic } from "./render";
 import { buildLobbyCache, drawBall, drawLobbyDynamic } from "./render-lobby";
 import { TaskModal, type OpenTask } from "./Tasks";
 
@@ -42,7 +42,7 @@ export type UseTarget =
   | { kind: "emergency" }
   | { kind: "lights" }
   | { kind: "panel"; panelId: "servidor" | "roteador" }
-  | { kind: "goat" }
+  | { kind: "rat" }
   | { kind: "object"; objectId: LobbyObjectId };
 
 export type Near = { use: UseTarget | null; killId: string | null; bodyId: string | null; ventId: VentId | null };
@@ -127,11 +127,11 @@ export function GameScreen({ client, snapshot }: Props) {
     let moving = false;
     let lastNear = EMPTY_NEAR;
     let seenKills = 0;
-    let seenBleat = 0;
+    let seenSqueak = 0;
     let ballSpin = 0;
     let lastBall: Point | null = null;
     const seenEmotes = new Map<string, number>();
-    const goatAnim = { facing: 1, walk: 0, lastX: 0 };
+    const ratAnim = { facing: 1, walk: 0, lastX: 0 };
     const remoteAnim = new Map<string, { facing: number; walk: number; lastX: number }>();
 
     const resize = () => {
@@ -204,12 +204,12 @@ export function GameScreen({ client, snapshot }: Props) {
         if (pos) remote.set(p.id, pos);
       }
 
-      // Júlio, a cabra (posição interpolada como a de um jogador).
-      const goat = client.remotePosition(GOAT_ID);
-      if (goat) {
-        if (Math.abs(goat.x - goatAnim.lastX) > 0.2) goatAnim.facing = goat.x > goatAnim.lastX ? 1 : -1;
-        goatAnim.lastX = goat.x;
-        if (goat.moving) goatAnim.walk += dt * 11;
+      // Júlio, o rato (posição interpolada como a de um jogador).
+      const rat = client.remotePosition(RAT_ID);
+      if (rat) {
+        if (Math.abs(rat.x - ratAnim.lastX) > 0.2) ratAnim.facing = rat.x > ratAnim.lastX ? 1 : -1;
+        ratAnim.lastX = rat.x;
+        if (rat.moving) ratAnim.walk += dt * 11;
       }
       const ball = lobby ? client.remotePosition(BALL_ID) : null;
       if (ball) {
@@ -232,7 +232,7 @@ export function GameScreen({ client, snapshot }: Props) {
           }
         }
         if (nearObject) use = { kind: "object", objectId: nearObject };
-        else if (goat && distance(me, goat) < PET_RANGE) use = { kind: "goat" };
+        else if (rat && distance(me, rat) < RAT_HIT_RANGE) use = { kind: "rat" };
       } else if (state.phase === "playing" && serverNow >= state.frozenUntil) {
         let best = USE_RANGE;
         for (const t of you.tasks) {
@@ -275,7 +275,7 @@ export function GameScreen({ client, snapshot }: Props) {
               }
             }
           }
-          if (!use && goat && !you.vent && distance(me, goat) < PET_RANGE) use = { kind: "goat" };
+          if (!use && rat && !you.vent && distance(me, rat) < RAT_HIT_RANGE) use = { kind: "rat" };
         }
       }
       let ventId: VentId | null = null;
@@ -380,14 +380,14 @@ export function GameScreen({ client, snapshot }: Props) {
         facing: number;
         walk: number;
         red: boolean;
-        goat?: boolean;
+        rat?: boolean;
         badge?: string;
         badgeColor?: string;
       };
       const drawn: Drawn[] = [];
-      const goatSeen = !!goat && visible(goat);
-      if (goat && goatSeen) {
-        drawn.push({ id: GOAT_ID, x: goat.x, y: goat.y, color: "white", name: GOAT_NAME, ghost: false, local: false, moving: goat.moving, facing: goatAnim.facing, walk: goatAnim.walk, red: false, goat: true });
+      const ratSeen = !!rat && visible(rat);
+      if (rat && ratSeen) {
+        drawn.push({ id: RAT_ID, x: rat.x, y: rat.y, color: "white", name: RAT_NAME, ghost: false, local: false, moving: rat.moving, facing: ratAnim.facing, walk: ratAnim.walk, red: false, rat: true });
       }
       const badgeOf = (p: RoomState["players"][number]): { badge?: string; badgeColor?: string } => {
         if (!lobby && state.phase !== "ended") {
@@ -441,8 +441,11 @@ export function GameScreen({ client, snapshot }: Props) {
       }
       drawn.sort((a, b) => a.y - b.y);
       for (const d of drawn) {
-        if (d.goat) {
-          drawGoat(ctx, d.x, d.y + 14, { facing: d.facing, walk: d.walk, moving: d.moving, time: nowPerf });
+        if (d.rat) {
+          // Tremidinha quando apanha.
+          const hitAge = client.squeak?.byId ? nowPerf - client.squeak.at : Infinity;
+          const shake = hitAge < 260 ? Math.sin(hitAge * 0.12) * 4 * (1 - hitAge / 260) : 0;
+          drawRat(ctx, d.x + shake, d.y + 14, { facing: d.facing, walk: d.walk, moving: d.moving, time: nowPerf });
           continue;
         }
         drawCharacter(ctx, d.x, d.y + 14, colorHex(d.color), {
@@ -465,9 +468,11 @@ export function GameScreen({ client, snapshot }: Props) {
       for (const d of drawn) {
         ctx.font = `600 14px ${font}`;
         ctx.fillStyle = "rgba(0,0,0,0.55)";
-        ctx.fillText(d.name, d.x + 1, d.y - 42 + 1);
-        ctx.fillStyle = d.goat ? "#ffd23d" : d.red ? "#ff6a5c" : d.ghost ? "rgba(255,255,255,0.55)" : "#ffffff";
-        ctx.fillText(d.name, d.x, d.y - 42);
+        // O rato é baixinho: o nome fica mais perto dele.
+        const top = d.rat ? d.y - 28 : d.y - 42;
+        ctx.fillText(d.name, d.x + 1, top + 1);
+        ctx.fillStyle = d.rat ? "#ffd23d" : d.red ? "#ff6a5c" : d.ghost ? "rgba(255,255,255,0.55)" : "#ffffff";
+        ctx.fillText(d.name, d.x, top);
         if (d.badge) {
           ctx.font = `700 10px ${font}`;
           ctx.fillStyle = "rgba(0,0,0,0.5)";
@@ -479,7 +484,7 @@ export function GameScreen({ client, snapshot }: Props) {
 
       // Emotes acima do personagem.
       for (const d of drawn) {
-        if (d.goat) continue;
+        if (d.rat) continue;
         const e = client.emotes.get(d.id);
         if (!e) continue;
         const age = nowPerf - e.at;
@@ -494,19 +499,19 @@ export function GameScreen({ client, snapshot }: Props) {
         drawBubble(ctx, d.x, d.y - (d.badge ? 70 : 60) - pop * 6, `${info.icon} ${info.label}`, font, age > EMOTE_DURATION_MS - 300 ? (EMOTE_DURATION_MS - age) / 300 : 1);
       }
 
-      // Balido do Júlio: balão + som (mais baixo quanto mais longe).
-      const bleat = client.bleat;
-      if (bleat && goat) {
-        if (bleat.at > seenBleat) {
-          seenBleat = bleat.at;
-          const mine = bleat.byId === you.id;
-          const volume = mine ? 1 : goatSeen ? Math.max(0, 1 - distance(me, goat) / 700) : 0;
-          if (volume > 0.08) sfx.bleat(volume);
+      // Guincho do Júlio: balão + som (mais baixo quanto mais longe).
+      const squeak = client.squeak;
+      if (squeak && rat) {
+        if (squeak.at > seenSqueak) {
+          seenSqueak = squeak.at;
+          const mine = squeak.byId === you.id;
+          const volume = mine ? 1 : ratSeen ? Math.max(0, 1 - distance(me, rat) / 700) : 0;
+          if (volume > 0.08) sfx.squeak(volume);
           if (mine) vibrate(25);
         }
-        const age = nowPerf - bleat.at;
-        if (goatSeen && age < 1800) {
-          drawBubble(ctx, goat.x, goat.y - 60 - Math.min(1, age / 150) * 6, bleat.byId ? "Méééé! ♥" : "Méééé!", font, age > 1400 ? (1800 - age) / 400 : 1);
+        const age = nowPerf - squeak.at;
+        if (ratSeen && age < 1800) {
+          drawBubble(ctx, rat.x, rat.y - 46 - Math.min(1, age / 150) * 6, squeak.byId ? "AI! Iiic!" : "Iiic!", font, age > 1400 ? (1800 - age) / 400 : 1);
         }
       }
 
@@ -610,8 +615,8 @@ export function GameScreen({ client, snapshot }: Props) {
       client.send({ type: "emergency" });
       return;
     }
-    if (target.kind === "goat") {
-      client.send({ type: "pet" });
+    if (target.kind === "rat") {
+      client.send({ type: "hitRat" });
       return;
     }
     if (target.kind === "object") {

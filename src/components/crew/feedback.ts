@@ -94,41 +94,34 @@ function noise(duration: number, from = 1800, to = 200, volume = 0.5) {
   src.start(now);
 }
 
-/** "Méééé" do Júlio: serra nasalada com vibrato rápido. */
-function bleatSound(volume: number) {
+/** "Iiic!" do Júlio: dois guinchos agudos e curtos, subindo de tom. */
+function squeakSound(volume: number) {
   if (!enabled || !ctx || ctx.state !== "running") return;
   const now = ctx.currentTime;
   const master = ctx.createGain();
-  master.gain.value = 0.16 * volume;
-  const filter = ctx.createBiquadFilter();
-  filter.type = "bandpass";
-  filter.frequency.value = 1300;
-  filter.Q.value = 1.2;
-  filter.connect(master).connect(ctx.destination);
-  const osc = ctx.createOscillator();
-  osc.type = "sawtooth";
-  osc.frequency.setValueAtTime(330, now);
-  osc.frequency.linearRampToValueAtTime(380, now + 0.12);
-  osc.frequency.linearRampToValueAtTime(300, now + 0.75);
-  const lfo = ctx.createOscillator();
-  const depth = ctx.createGain();
-  lfo.frequency.value = 18;
-  depth.gain.value = 28;
-  lfo.connect(depth).connect(osc.frequency);
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(1, now + 0.04);
-  gain.gain.setValueAtTime(1, now + 0.55);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
-  osc.connect(gain).connect(filter);
-  osc.start(now);
-  lfo.start(now);
-  osc.stop(now + 0.85);
-  lfo.stop(now + 0.85);
+  master.gain.value = 0.12 * volume;
+  master.connect(ctx.destination);
+  for (const [t, f1, f2, d] of [
+    [0, 1900, 2600, 0.09],
+    [0.13, 2100, 3100, 0.12],
+  ] as const) {
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(f1, now + t);
+    osc.frequency.exponentialRampToValueAtTime(f2, now + t + d * 0.6);
+    osc.frequency.exponentialRampToValueAtTime(f1 * 0.9, now + t + d);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now + t);
+    gain.gain.exponentialRampToValueAtTime(1, now + t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + t + d);
+    osc.connect(gain).connect(master);
+    osc.start(now + t);
+    osc.stop(now + t + d + 0.02);
+  }
 }
 
 export const sfx = {
-  bleat: (volume = 1) => bleatSound(volume),
+  squeak: (volume = 1) => squeakSound(volume),
   ballHit: (power: number, volume = 1) => {
     noise(0.07, 2400, 600, 0.35 * volume);
     play([{ f: 140 + power * 90, t: 0, d: 0.09, type: "triangle", v: 0.6 * volume, slide: 80 }]);
@@ -141,6 +134,10 @@ export const sfx = {
   mode: () => play([{ f: 392, t: 0, d: 0.12, type: "triangle" }, { f: 587, t: 0.1, d: 0.2, type: "triangle" }]),
   mission: () => play([{ f: 784, t: 0, d: 0.1 }, { f: 1047, t: 0.09, d: 0.1 }, { f: 1319, t: 0.18, d: 0.25 }]),
   cancel: () => play([{ f: 440, t: 0, d: 0.15, type: "triangle" }, { f: 330, t: 0.13, d: 0.25, type: "triangle" }]),
+  whack: () => {
+    noise(0.08, 1800, 300, 0.45);
+    play([{ f: 220, t: 0, d: 0.08, type: "square", v: 0.35, slide: 110 }]);
+  },
   emote: () => play([{ f: 880, t: 0, d: 0.06, v: 0.5 }]),
   join: () => play([{ f: 660, t: 0, d: 0.12 }, { f: 990, t: 0.08, d: 0.16 }]),
   leave: () => play([{ f: 660, t: 0, d: 0.12 }, { f: 440, t: 0.08, d: 0.16 }]),

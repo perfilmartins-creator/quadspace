@@ -1,4 +1,4 @@
-// Navegação em grade (BFS): usada pelo Júlio (a cabra) e pelos bots de teste.
+// Navegação em grade (BFS): usada pelo Júlio (o rato) e pelos bots de teste.
 // Um navegador por cena (mapa da partida e lobby), criado sob demanda.
 
 import { PLAYER_HALF } from "./constants";

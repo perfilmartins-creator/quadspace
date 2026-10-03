@@ -696,6 +696,37 @@ async function testEmotesInteractAfkHost() {
   closeAll(all);
 }
 
+async function testRatXp() {
+  console.log("\n# Bater no Júlio (rato) para ganhar XP");
+  const [a, b] = await makeRoom(["Gabriel", "Joao"]);
+  const hit = async (bot: Bot) => {
+    for (let i = 0; i < 6; i++) {
+      const r = bot.entity("@julio")!;
+      bot.syncPos();
+      await bot.runStraight({ x: r.x - 30, y: r.y }, 1.5);
+      const r2 = bot.entity("@julio")!;
+      if (Math.hypot(r2.x - bot.pos.x, r2.y - bot.pos.y) < 90) break;
+    }
+    bot.send({ type: "hitRat" });
+  };
+  const xp0 = a.you.xp;
+  await hit(a);
+  await until(() => a.you.xp === xp0 + 10, "Gabriel ganhou +10 XP");
+  check(a.fx.some((f) => f.kind === "xp"), "aviso de XP recebido");
+  const before = a.entity("@julio")!;
+  await sleep(600);
+  const after = a.entity("@julio")!;
+  check(Math.hypot(after.x - before.x, after.y - before.y) > 60, "o rato fugiu depressa depois de apanhar");
+  a.send({ type: "hitRat" });
+  await sleep(300);
+  check(a.you.xp === xp0 + 10, "não dá para farmar: intervalo entre pancadas");
+  const xpB = b.you.xp;
+  await hit(b);
+  await until(() => b.you.xp === xpB + 10, "outro jogador também ganha XP");
+  check(a.you.xp === xp0 + 10, "XP de um não vaza para o outro");
+  closeAll([a, b]);
+}
+
 async function main() {
   const t0 = Date.now();
   const only = process.argv[2];
@@ -708,6 +739,7 @@ async function main() {
     ["hide", testHideSeek],
     ["time", testHideSeekTime],
     ["social", testEmotesInteractAfkHost],
+  ["rat", testRatXp],
   ];
   for (const [name, fn] of tests) {
     if (only && only !== name) continue;

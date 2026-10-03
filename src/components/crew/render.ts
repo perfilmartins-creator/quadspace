@@ -862,139 +862,138 @@ export function drawFog(
   fog.restore();
 }
 
-// ---------- Júlio, a cabra ----------
+// ---------- Júlio, o rato ----------
 
-/** Cabra cartoon vista de lado. (x, y) = ponto dos pés. */
-export function drawGoat(ctx: CanvasRenderingContext2D, x: number, y: number, o: { facing: number; walk: number; moving: boolean; time: number }) {
+/** Rato cartoon visto de lado. (x, y) = ponto dos pés. */
+export function drawRat(ctx: CanvasRenderingContext2D, x: number, y: number, o: { facing: number; walk: number; moving: boolean; time: number }) {
   const OUT = "#16172a";
-  const swing = o.moving ? Math.sin(o.walk) * 4 : 0;
-  const bob = o.moving ? Math.abs(Math.sin(o.walk)) * 1.5 : 0;
-  // Parado, abaixa a cabeça para "pastar" de vez em quando.
-  const graze = o.moving ? 0 : Math.max(0, Math.sin(o.time * 0.0016)) * 9;
+  const FUR = "#a7aec0";
+  const FUR_DARK = "#8890a4";
+  const PINK = "#f4a6b4";
+  const step = o.moving ? Math.sin(o.walk * 1.4) : 0;
+  const bob = o.moving ? Math.abs(Math.sin(o.walk * 1.4)) * 1.5 : 0;
+  // Parado, fareja: o focinho treme.
+  const sniff = o.moving ? 0 : Math.sin(o.time * 0.03) * 0.8 * Math.max(0, Math.sin(o.time * 0.004));
 
   ctx.save();
   ctx.translate(x, y);
 
   ctx.fillStyle = "rgba(10,10,25,0.28)";
   ctx.beginPath();
-  ctx.ellipse(0, 0, 24, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 22, 5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.scale(o.facing >= 0 ? 1 : -1, 1);
+  // Um pouco maior que o tamanho "real" para ser fácil de achar e de acertar.
+  ctx.scale(o.facing >= 0 ? 1.25 : -1.25, 1.25);
   ctx.translate(0, -bob);
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.strokeStyle = OUT;
-  ctx.lineWidth = 3;
 
-  // Pernas (as de trás mais escuras)
-  const leg = (lx: number, phase: number, back: boolean) => {
-    const off = swing * phase;
-    ctx.fillStyle = back ? "#cfc6b6" : "#ebe5d8";
-    roundRect(ctx, lx - 3 + off, -16, 7, 15, 3);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#3b3330";
-    roundRect(ctx, lx - 3 + off, -4, 7, 5, 2);
-    ctx.fill();
-  };
-  leg(-12, -1, true);
-  leg(10, 1, true);
-  leg(-6, 1, false);
-  leg(15, -1, false);
-
-  // Rabinho
-  ctx.fillStyle = "#f3efe6";
-  ctx.beginPath();
-  ctx.moveTo(-20, -30);
-  ctx.quadraticCurveTo(-30, -42 + swing * 0.4, -24, -40);
-  ctx.quadraticCurveTo(-21, -36, -17, -33);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // Corpo
-  ctx.fillStyle = "#f3efe6";
-  ctx.beginPath();
-  ctx.ellipse(0, -26, 23, 14, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  // Mancha marrom e sombra da barriga
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(0, -26, 21.5, 12.5, 0, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.fillStyle = "#c9a27a";
-  ctx.beginPath();
-  ctx.ellipse(-8, -32, 9, 6, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(22,23,42,0.12)";
-  ctx.fillRect(-24, -20, 48, 10);
-  ctx.restore();
-
-  // Cabeça (desce quando pasta)
-  ctx.save();
-  ctx.translate(18, -36 + graze);
-  ctx.rotate(graze * 0.04);
-  // Pescoço
-  ctx.fillStyle = "#f3efe6";
-  ctx.beginPath();
-  ctx.moveTo(-10, 2);
-  ctx.lineTo(-2, -6);
-  ctx.lineTo(6, 2);
-  ctx.lineTo(-2, 14 - graze * 0.5);
-  ctx.closePath();
-  ctx.fill();
-  // Chifres
+  // Rabo comprido, balançando
+  const wag = Math.sin(o.time * 0.006 + o.walk) * 5;
   ctx.strokeStyle = OUT;
   ctx.lineWidth = 6;
   ctx.beginPath();
-  ctx.moveTo(0, -10);
-  ctx.quadraticCurveTo(-6, -22, -14, -18);
+  ctx.moveTo(-18, -10);
+  ctx.bezierCurveTo(-34, -6 + wag, -40, -22 - wag, -30, -30 + wag * 0.5);
   ctx.stroke();
-  ctx.strokeStyle = "#c79a62";
+  ctx.strokeStyle = PINK;
   ctx.lineWidth = 3;
   ctx.stroke();
+
+  // Patinhas
   ctx.strokeStyle = OUT;
+  ctx.lineWidth = 2.5;
+  const foot = (fx: number, phase: number, back: boolean) => {
+    ctx.fillStyle = back ? "#e08c9c" : PINK;
+    ctx.beginPath();
+    ctx.ellipse(fx + step * 3 * phase, -2, 5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  };
+  foot(-10, -1, true);
+  foot(9, 1, true);
+  foot(-5, 1, false);
+  foot(14, -1, false);
+
+  // Corpo em gota
   ctx.lineWidth = 3;
-  // Orelha
-  ctx.fillStyle = "#e2d9c8";
+  ctx.fillStyle = FUR;
   ctx.beginPath();
-  ctx.ellipse(-7, -4, 7, 3.5, 0.5, 0, Math.PI * 2);
+  ctx.ellipse(-2, -13, 20, 12, -0.08, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  // Cabeça
-  ctx.fillStyle = "#f3efe6";
+  ctx.save();
   ctx.beginPath();
-  ctx.ellipse(4, -2, 11, 9, 0.35, 0, Math.PI * 2);
+  ctx.ellipse(-2, -13, 18.5, 10.5, -0.08, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = "#cdd2de";
+  ctx.beginPath();
+  ctx.ellipse(2, -4, 15, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = FUR_DARK;
+  ctx.beginPath();
+  ctx.ellipse(-8, -22, 12, 5, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Cabeça com focinho pontudo
+  ctx.save();
+  ctx.translate(15, -17);
+  // Orelha de trás
+  ctx.fillStyle = FUR_DARK;
+  ctx.beginPath();
+  ctx.arc(-6, -9, 7, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  // Focinho
-  ctx.fillStyle = "#f7c9c4";
+  ctx.fillStyle = FUR;
   ctx.beginPath();
-  ctx.ellipse(12, 3, 4.5, 3.5, 0.35, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = OUT;
-  ctx.beginPath();
-  ctx.arc(14, 2, 1.2, 0, Math.PI * 2);
-  ctx.fill();
-  // Barbicha
-  ctx.fillStyle = "#d9d2c3";
-  ctx.beginPath();
-  ctx.moveTo(6, 7);
-  ctx.lineTo(9, 7);
-  ctx.lineTo(6, 16);
+  ctx.moveTo(-8, -6);
+  ctx.quadraticCurveTo(-2, -12, 6, -6);
+  ctx.quadraticCurveTo(16 + sniff, -2, 17 + sniff, 2);
+  ctx.quadraticCurveTo(10, 8, -4, 7);
+  ctx.quadraticCurveTo(-11, 2, -8, -6);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
+  // Orelha da frente, grande e rosada por dentro
+  ctx.fillStyle = FUR;
+  ctx.beginPath();
+  ctx.arc(1, -10, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = PINK;
+  ctx.beginPath();
+  ctx.arc(1.5, -9.5, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Nariz
+  ctx.fillStyle = "#ff7d93";
+  ctx.beginPath();
+  ctx.arc(17 + sniff, 1.5, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Bigodes
+  ctx.strokeStyle = "rgba(22,23,42,0.7)";
+  ctx.lineWidth = 1.2;
+  for (const [dy, len] of [
+    [-1, 9],
+    [2, 10],
+    [5, 8],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(13 + sniff, 2);
+    ctx.lineTo(13 + sniff + len, 2 + dy * 1.6);
+    ctx.stroke();
+  }
   // Olho
   ctx.fillStyle = OUT;
   ctx.beginPath();
-  ctx.arc(6, -5, 2.4, 0, Math.PI * 2);
+  ctx.arc(7, -2, 2.4, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "#fff";
   ctx.beginPath();
-  ctx.arc(6.8, -5.8, 0.9, 0, Math.PI * 2);
+  ctx.arc(7.8, -2.8, 0.9, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 

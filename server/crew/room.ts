@@ -21,15 +21,18 @@ import {
   DOORS_DURATION_MS,
   EJECT_MS,
   EMERGENCY_RANGE,
-  GOAT_ID,
-  GOAT_SPEED,
+  RAT_ID,
+  RAT_SPEED,
   HOST_GRACE_MS,
   KILL_RANGE,
   MEETING_INTRO_MS,
   MIN_PLAYERS,
   PANEL_HOLD_MS,
-  PET_COOLDOWN_MS,
-  PET_RANGE,
+  RAT_FLEE_MS,
+  RAT_FLEE_SPEED,
+  RAT_HIT_COOLDOWN_MS,
+  RAT_HIT_RANGE,
+  RAT_XP,
   RECONNECT_GRACE_MS,
   REPORT_RANGE,
   ROLE_REVEAL_MS,
@@ -174,8 +177,8 @@ function emptySabotage(): SabotageState {
   return { lights: false, critical: null, doors: null };
 }
 
-const GAME_GOAT_SPOTS: Point[] = [...TASKS.map((t) => t.pos), EMERGENCY_POS, { x: 330, y: 1120 }, { x: 1500, y: 1180 }, { x: 900, y: 640 }];
-const LOBBY_GOAT_SPOTS: Point[] = [
+const GAME_RAT_SPOTS: Point[] = [...TASKS.map((t) => t.pos), EMERGENCY_POS, { x: 330, y: 1120 }, { x: 1500, y: 1180 }, { x: 900, y: 640 }];
+const LOBBY_RAT_SPOTS: Point[] = [
   { x: 120, y: 620 },
   { x: 420, y: 900 },
   { x: 700, y: 600 },
@@ -216,17 +219,18 @@ export class Room {
   private dirty = true;
   private chatSeq = 0;
 
-  /** Júlio, a cabra da QUAD: passeia pela cena atual, bale e aceita carinho. Não interfere nas regras. */
-  goat = {
+  /** Júlio, o rato da QUAD: corre pela cena atual, guincha e aceita carinho. Não interfere nas regras. */
+  rat = {
     scene: "lobby" as "lobby" | "game",
     pos: lobbyNavigator().nearestFree({ x: 420, y: 900 }),
     route: [] as Point[],
     restUntil: 0,
-    nextBleatAt: 0,
+    fleeUntil: 0,
+    nextSqueakAt: 0,
     stuckSince: 0,
     lastTick: 0,
   };
-  private petAt = new Map<string, number>();
+  private ratHitAt = new Map<string, number>();
 
   constructor(code: string, passwordHash: string) {
     this.code = code;
@@ -353,7 +357,7 @@ export class Room {
     const player = this.players.get(playerId);
     if (!player) return;
     this.players.delete(playerId);
-    this.petAt.delete(playerId);
+    this.ratHitAt.delete(playerId);
     if (player.socket) {
       try {
         if (reason === "kick") this.sendTo(player, { type: "kicked" });
@@ -530,7 +534,7 @@ export class Room {
         p.push([q.id, Math.round(q.x), Math.round(q.y), ghost ? 1 : 0]);
       }
       if (inLobby) p.push(["@ball", Math.round(this.ball.x), Math.round(this.ball.y), 0]);
-      if (this.goat.scene === this.scene) p.push([GOAT_ID, Math.round(this.goat.pos.x), Math.round(this.goat.pos.y), 0]);
+      if (this.rat.scene === this.scene) p.push([RAT_ID, Math.round(this.rat.pos.x), Math.round(this.rat.pos.y), 0]);
       this.sendTo(viewer, { type: "snap", t: now, p });
     }
   }
@@ -564,7 +568,7 @@ export class Room {
 
     if (this.scene === "lobby") this.tickLobby(now, dt);
     this.tickAfk(now);
-    this.tickGoat(now);
+    this.tickRat(now);
     this.sendSnapshots(now);
     this.flush();
   }
@@ -861,7 +865,7 @@ export class Room {
     this.eject = null;
     this.end = null;
     this.placeAtGameSpawn();
-    this.moveGoat("game");
+    this.moveRat("game");
     this.markDirty();
   }
 
@@ -921,61 +925,48 @@ export class Room {
     resetBall(this.ball, now, 800);
     this.placeAtLobbySpawn();
     for (const p of this.players.values()) this.updateZones(p);
-    this.moveGoat("lobby");
+    this.moveRat("lobby");
     this.markDirty();
     if (thenStart && requester && requester.id === this.hostId) this.start(requester, true);
   }
 
-  // ---------- Júlio, a cabra ----------
+  // ---------- Júlio, o rato ----------
 
   private navFor(scene: "lobby" | "game"): Navigator {
     return scene === "lobby" ? lobbyNavigator() : gameNavigator();
   }
 
-  private moveGoat(scene: "lobby" | "game") {
-    const g = this.goat;
+  private moveRat(scene: "lobby" | "game") {
+    const g = this.rat;
     g.scene = scene;
-    const spots = scene === "lobby" ? LOBBY_GOAT_SPOTS : GAME_GOAT_SPOTS;
+    const spots = scene === "lobby" ? LOBBY_RAT_SPOTS : GAME_RAT_SPOTS;
     g.pos = this.navFor(scene).nearestFree(spots[randomInt(spots.length)]);
     g.route = [];
     g.restUntil = Date.now() + 2000;
   }
 
-  private goatSolids() {
-    return this.goat.scene === "lobby" ? LOBBY_SOLIDS : solidsWith(this.closedDoors());
+  private ratSolids() {
+    return this.rat.scene === "lobby" ? LOBBY_SOLIDS : solidsWith(this.closedDoors());
   }
 
-  private tickGoat(now: number) {
-    const g = this.goat;
+  private tickRat(now: number) {
+    const g = this.rat;
     const dt = g.lastTick ? Math.min(0.2, (now - g.lastTick) / 1000) : 0;
     g.lastTick = now;
-    if (g.nextBleatAt === 0) g.nextBleatAt = now + 15_000 + randomInt(20_000);
+    if (g.nextSqueakAt === 0) g.nextSqueakAt = now + 15_000 + randomInt(20_000);
     // Na reunião todo mundo (inclusive o Júlio) fica parado.
     if (this.phase === "meeting" || this.phase === "ejecting") return;
 
-    if (now >= g.nextBleatAt) {
-      g.nextBleatAt = now + 25_000 + randomInt(25_000);
-      this.broadcastBleat(null);
+    if (now >= g.nextSqueakAt) {
+      g.nextSqueakAt = now + 25_000 + randomInt(25_000);
+      this.broadcastSqueak(null);
     }
     if (now < g.restUntil) return;
 
-    const solids = this.goatSolids();
+    const solids = this.ratSolids();
     if (g.route.length === 0) {
-      const spots = g.scene === "lobby" ? LOBBY_GOAT_SPOTS : GAME_GOAT_SPOTS;
-      const target = spots[randomInt(spots.length)];
-      // Sem "andar de robô": pula pontos que já dá para alcançar em linha reta.
-      const raw = simplify(this.navFor(g.scene).path(g.pos, target));
-      const route: Point[] = [];
-      let from = g.pos;
-      for (let i = 0; i < raw.length; i++) {
-        let j = i;
-        while (j + 1 < raw.length && pathClear(from, raw[j + 1], solids)) j++;
-        route.push(raw[j]);
-        from = raw[j];
-        i = j;
-      }
-      g.route = route;
-      g.stuckSince = 0;
+      const spots = g.scene === "lobby" ? LOBBY_RAT_SPOTS : GAME_RAT_SPOTS;
+      this.planRatRoute(spots[randomInt(spots.length)]);
       return;
     }
 
@@ -983,11 +974,11 @@ export class Room {
     const dx = next.x - g.pos.x;
     const dy = next.y - g.pos.y;
     const d = Math.hypot(dx, dy);
-    const step = GOAT_SPEED * dt;
+    const step = RAT_SPEED * (now < g.fleeUntil ? RAT_FLEE_SPEED : 1) * dt;
     if (d <= step + 0.5) {
       g.pos = moveWithCollision(g.pos, dx, dy, solids);
       g.route.shift();
-      // Chegou: pasta um pouco antes de escolher outro lugar.
+      // Chegou: fareja um pouco antes de escolher outro lugar.
       if (g.route.length === 0) g.restUntil = now + 2500 + randomInt(5000);
       return;
     }
@@ -1003,22 +994,54 @@ export class Room {
     g.pos = moved;
   }
 
-  private broadcastBleat(by: Player | null) {
-    for (const p of this.players.values()) this.sendTo(p, { type: "bleat", byId: by?.id ?? null, byName: by?.name ?? null });
+  /** Rota até `target` sem "andar de robô": pula pontos que já dá para alcançar em linha reta. */
+  private planRatRoute(target: Point) {
+    const g = this.rat;
+    const solids = this.ratSolids();
+    const raw = simplify(this.navFor(g.scene).path(g.pos, target));
+    const route: Point[] = [];
+    let from = g.pos;
+    for (let i = 0; i < raw.length; i++) {
+      let j = i;
+      while (j + 1 < raw.length && pathClear(from, raw[j + 1], solids)) j++;
+      route.push(raw[j]);
+      from = raw[j];
+      i = j;
+    }
+    g.route = route;
+    g.stuckSince = 0;
   }
 
-  /** Fazer carinho no Júlio: ele para, bale e todo mundo ouve. */
-  pet(player: Player) {
+  private broadcastSqueak(by: Player | null) {
+    for (const p of this.players.values()) this.sendTo(p, { type: "squeak", byId: by?.id ?? null, byName: by?.name ?? null });
+  }
+
+  /**
+   * Bater no Júlio: quem bate ganha XP, ele guincha e dispara para longe.
+   * Qualquer jogador pode (no lobby, no resultado ou vivo na partida), com intervalo por jogador.
+   */
+  hitRat(player: Player) {
     const now = Date.now();
     const lobbyLike = this.scene === "lobby" || this.phase === "ended";
     if (!lobbyLike && !(this.phase === "playing" && player.alive && !player.vent && now >= this.frozenUntil)) return;
-    if (this.goat.scene !== this.scene) return;
-    if (distance(player, this.goat.pos) > PET_RANGE + 25) return;
-    if (now - (this.petAt.get(player.id) ?? 0) < PET_COOLDOWN_MS) return;
-    this.petAt.set(player.id, now);
+    if (this.rat.scene !== this.scene) return;
+    if (distance(player, this.rat.pos) > RAT_HIT_RANGE + 25) return;
+    if (now - (this.ratHitAt.get(player.id) ?? 0) < RAT_HIT_COOLDOWN_MS) return;
+    this.ratHitAt.set(player.id, now);
     player.lastActiveAt = now;
-    this.goat.restUntil = Math.max(this.goat.restUntil, now + 2500);
-    this.broadcastBleat(player);
+    player.missions.xp += RAT_XP;
+    this.sendTo(player, { type: "fx", fx: { kind: "xp", amount: RAT_XP, reason: "bateu no Júlio" } });
+    // Foge para o canto mais longe de quem bateu (entre os 3 mais distantes, para variar).
+    const g = this.rat;
+    const spots = (g.scene === "lobby" ? LOBBY_RAT_SPOTS : GAME_RAT_SPOTS)
+      .map((p) => ({ p, d: distance(p, player) }))
+      .sort((a, b) => b.d - a.d)
+      .slice(0, 3);
+    g.restUntil = 0;
+    g.fleeUntil = now + RAT_FLEE_MS;
+    this.planRatRoute(spots[randomInt(spots.length)].p);
+    this.broadcastSqueak(player);
+    this.markDirty();
   }
 
   // ---------- Movimento ----------
