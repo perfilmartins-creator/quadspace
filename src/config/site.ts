@@ -26,7 +26,7 @@ export const contact = {
   email: "contato@quadspace.com.br",
   instagramHandle: "@quad___space",
   instagramUrl: "https://instagram.com/quad___space",
-  whatsappNumber: "5581994494037",
+  whatsappNumber: "5581999314597",
   whatsappMessageBooking:
     "Olá! Vim pelo site da QUAD SPACE e gostaria de consultar a disponibilidade do estúdio.",
   whatsappMessageQuestion:
@@ -84,6 +84,7 @@ export const equipment: EquipmentCategory[] = [
     title: "Iluminação",
     items: [
       { qty: 2, name: "Godox MS300" },
+      { name: "Rádio flash" },
       { qty: 1, name: "Nanlite FS-300B RGB" },
       { qty: 1, name: "Sokani X100 RGB LED" },
       { qty: 2, name: "Tripés de aço inox para iluminação" },
@@ -97,7 +98,7 @@ export const equipment: EquipmentCategory[] = [
     items: [
       { qty: 1, name: "Fundo branco" },
       { qty: 1, name: "Fundo preto" },
-      { qty: 1, name: "Tecido marrom" },
+      { name: "Tecido a consultar" },
     ],
   },
   {

@@ -129,7 +129,7 @@ export const faq = {
     {
       question: "Quais equipamentos estão disponíveis?",
       answer:
-        "Iluminação Godox, Nanlite e Sokani, softboxes Triopo e tripés de aço inox. A lista completa está na seção Estrutura.",
+        "Iluminação Godox, Nanlite e Sokani, rádio flash, softboxes Triopo e tripés de aço inox. A lista completa está na seção Estrutura.",
     },
     {
       question: "Os equipamentos estão inclusos na locação?",
@@ -137,7 +137,7 @@ export const faq = {
     },
     {
       question: "Quais fundos estão disponíveis?",
-      answer: "O estúdio conta com fundo branco, fundo preto e tecido marrom.",
+      answer: "O estúdio conta com fundo branco e fundo preto. Consulte a disponibilidade de tecido.",
     },
     {
       question: "O estúdio possui ar-condicionado?",
